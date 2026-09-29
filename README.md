@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Support Desk for AutoCount
 
-## Getting Started
+A personal guidelines tool for an AutoCount support consultant: a searchable library of your own fixes and how-tos, unified search across official AutoCount sources, an accounting analyst (journal entries + AutoCount steps + SST / e-Invoice notes), client reply drafts and SOP export. Tickets stay in Zoho Desk.
 
-First, run the development server:
+> **Status: Phase 0 prototype.** All data is sample data. There is no database, no AI calls, no web search and no login yet.
+
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3001.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Home layout options:** `/` (Option A, search-first) and `/?style=b` (Option B, library shelf).
+- **Preview state** (top bar): switch any screen between *With data*, *Empty*, *Loading* and *Error*.
+- **Keyboard:** `Ctrl K` command palette · `/` search · `N` new guide.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Checks
 
-## Learn More
+```bash
+npm test        # lint + type-check + Playwright smoke tests (desktop and phone)
+npm run build   # production build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Path | What |
+|---|---|
+| `app/(app)/` | One folder per screen (guides, search, analyst, replies, sop, templates, releases, settings) |
+| `components/shell/` | Sidebar, phone tab bar, command palette, preview-state switcher |
+| `components/shared/` | Page header + “How this works” note, smart text/image input, badges, empty/loading/error states |
+| `lib/types.ts` | Domain types. These become the Phase 1 database schema |
+| `lib/mock/` | Sample guides, analyses, templates and release notes |
+| `e2e/` | Playwright smoke tests |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Setup for Supabase, the Anthropic API, SearXNG, environment variables, backups and deployment is added in later phases.
