@@ -2,15 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, ExternalLink, FileText, Image as ImageIcon, MessageSquareText, Pencil, Pin, ScrollText } from "lucide-react";
+import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, FileText, Image as ImageIcon, MessageSquareText, Pencil, Pin, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { HowThisWorks } from "@/components/shared/page-header";
 import { ProductLabel, Tag, VerifiedBadge } from "@/components/shared/badges";
-import { BlockSkeleton, ErrorState } from "@/components/shared/states";
-import { useDemoState } from "@/components/shell/demo-state";
-import { guides } from "@/lib/mock/guides";
-import { officialResults } from "@/lib/mock/library";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Guide } from "@/lib/types";
@@ -24,10 +20,9 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-export function GuideDetail({ guide: g }: { guide: Guide }) {
-  const { state } = useDemoState();
+export function GuideDetail({ guide: g, allGuides }: { guide: Guide; allGuides: Guide[] }) {
   const [verified, setVerified] = useState(g.verified);
-  const similar = searchGuides(guides, `${g.title} ${g.tags.join(" ")}`)
+  const similar = searchGuides(allGuides, `${g.title} ${g.tags.join(" ")}`)
     .filter((r) => r.guide.id !== g.id)
     .slice(0, 3);
 
@@ -36,28 +31,6 @@ export function GuideDetail({ guide: g }: { guide: Guide }) {
       <ArrowLeft className="size-4" /> Guide library
     </Link>
   );
-
-  if (state === "loading")
-    return (
-      <>
-        {back}
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <BlockSkeleton className="h-96" />
-          <BlockSkeleton className="h-72" />
-        </div>
-      </>
-    );
-  if (state === "error" || state === "empty")
-    return (
-      <>
-        {back}
-        <ErrorState title={state === "empty" ? "This guide was deleted" : "Couldn’t open this guide"}>
-          {state === "empty"
-            ? "It was moved to the bin. You can restore it from Settings › Deleted items within 30 days."
-            : "The request timed out. Try again in a moment."}
-        </ErrorState>
-      </>
-    );
 
   return (
     <>
@@ -183,16 +156,13 @@ export function GuideDetail({ guide: g }: { guide: Guide }) {
             <h2 className="flex items-center gap-1.5 font-medium">
               <Pin className="size-3.5" /> Pinned official sources
             </h2>
-            <ul className="space-y-1.5">
-              {officialResults.slice(0, 1).map((r) => (
-                <li key={r.title}>
-                  <a href={r.url} target="_blank" rel="noreferrer" className="inline-flex items-start gap-1 text-primary hover:underline">
-                    {r.title} <ExternalLink className="mt-0.5 size-3 shrink-0" />
-                  </a>
-                  <span className="block text-xs text-muted-foreground">{r.site}</span>
-                </li>
-              ))}
-            </ul>
+            <p className="text-xs text-muted-foreground">
+              None yet. Pin useful AutoCount pages from{" "}
+              <Link href={`/search?q=${encodeURIComponent(g.title)}`} className="text-primary hover:underline">
+                Search
+              </Link>{" "}
+              and they appear here.
+            </p>
           </section>
 
           {similar.length > 0 && (

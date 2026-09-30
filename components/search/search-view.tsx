@@ -8,14 +8,13 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/shared/page-header";
 import { ConfidenceBadge, Tag, VerifiedBadge } from "@/components/shared/badges";
 import { SmartInput } from "@/components/shared/smart-input";
-import { EmptyState, ErrorState } from "@/components/shared/states";
-import { useDemoState } from "@/components/shell/demo-state";
-import { guides } from "@/lib/mock/guides";
+import { EmptyState } from "@/components/shared/states";
+// Official results stay sample data until SearXNG is connected in Phase 3.
 import { officialResults } from "@/lib/mock/library";
+import type { Guide } from "@/lib/types";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
 import { PRODUCTS } from "@/lib/types";
@@ -38,9 +37,8 @@ function SectionTitle({ id, n, icon: Icon, title, meta }: { id: string; n: strin
   );
 }
 
-export function SearchView({ initialQuery }: { initialQuery: string }) {
+export function SearchView({ guides, initialQuery }: { guides: Guide[]; initialQuery: string }) {
   const router = useRouter();
-  const { state } = useDemoState();
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [product, setProduct] = useState<string | null>(null);
@@ -57,7 +55,7 @@ export function SearchView({ initialQuery }: { initialQuery: string }) {
     .map((r) => r.guide)
     .filter((g) => !product || g.product === product);
   const hasQuery = query.trim().length > 0;
-  const noResults = state === "empty" || (hasQuery && mine.length === 0);
+  const noResults = hasQuery && mine.length === 0;
   const top = mine[0];
 
   return (
@@ -124,7 +122,7 @@ export function SearchView({ initialQuery }: { initialQuery: string }) {
         </div>
       </div>
 
-      {!hasQuery && state !== "loading" && state !== "error" ? (
+      {!hasQuery ? (
         <EmptyState icon={Search} title="Search your guides and AutoCount’s own documentation">
           Type what the client told you, paste an error message, or search with a screenshot. For example:{" "}
           <button type="button" className="text-primary underline" onClick={() => run("server was not found")}>
@@ -132,21 +130,13 @@ export function SearchView({ initialQuery }: { initialQuery: string }) {
           </button>
           .
         </EmptyState>
-      ) : state === "error" ? (
-        <ErrorState title="Search didn’t finish">The AI service didn’t reply (rate limit reached). Your guide results still work. Try the AI answer again in a minute.</ErrorState>
       ) : (
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
           <div className="flex flex-col gap-8">
             {/* A. My guides */}
             <section aria-labelledby="sec-mine">
-              <SectionTitle id="sec-mine" n="A" icon={BookText} title="Your guides" meta={state === "loading" ? "Searching…" : `${noResults ? 0 : mine.length} match${mine.length === 1 ? "" : "es"}`} />
-              {state === "loading" ? (
-                <div className="space-y-2">
-                  {[0, 1, 2].map((i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
-                </div>
-              ) : noResults ? (
+              <SectionTitle id="sec-mine" n="A" icon={BookText} title="Your guides" meta={`${mine.length} match${mine.length === 1 ? "" : "es"}`} />
+              {noResults ? (
                 <EmptyState icon={SearchX} title="None of your guides match">
                   Check the official results, or{" "}
                   <Link href="/guides/new" className="text-primary underline">
@@ -191,13 +181,7 @@ export function SearchView({ initialQuery }: { initialQuery: string }) {
                   </button>
                 }
               />
-              {state === "loading" ? (
-                <div className="space-y-2">
-                  {[0, 1].map((i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : officialDown ? (
+              {officialDown ? (
                 <div className="rounded-lg border bg-card p-4 text-sm">
                   <p className="flex items-center gap-2 font-medium">
                     <WifiOff className="size-4 text-warning" /> Official search is offline
@@ -249,14 +233,8 @@ export function SearchView({ initialQuery }: { initialQuery: string }) {
           <section aria-labelledby="sec-ai" className="xl:sticky xl:top-20 xl:self-start">
             <SectionTitle id="sec-ai" n="C" icon={Sparkles} title="AI answer" />
             <div className="rounded-lg border bg-card p-4 text-sm">
-              {state === "loading" ? (
-                <div className="space-y-2" aria-busy>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              ) : noResults || !top ? (
+              <p className="mb-3 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">Preview. The live AI answer is connected in Phase 3.</p>
+              {noResults || !top ? (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">Based on: official docs only</p>
                   <p>None of your guides cover this. The official results above are the best starting point. I don’t have enough to give confident steps, so I haven’t guessed any.</p>

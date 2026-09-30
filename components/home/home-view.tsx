@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { loadSampleData } from "@/app/(app)/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookText, Calculator, FilePlus2, Landmark, NotebookText, ScanBarcode, Search, Upload, Wallet, type LucideIcon } from "lucide-react";
+import { BookText, Calculator, FilePlus2, Landmark, Loader2, NotebookText, ScanBarcode, Search, Sparkles, Upload, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
-import { BlockSkeleton, EmptyState, ErrorState } from "@/components/shared/states";
-import { useDemoState } from "@/components/shell/demo-state";
-import { guides } from "@/lib/mock/guides";
+import { EmptyState } from "@/components/shared/states";
 import { countBy, mostUsed, recentlyUpdated, shortProduct, topTags, unverified } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
 import { PRODUCTS, type Guide, type Product } from "@/lib/types";
@@ -84,8 +84,7 @@ function Section({ title, action, children, className }: { title: string; action
   );
 }
 
-export function HomeView() {
-  const { state } = useDemoState();
+export function HomeView({ guides }: { guides: Guide[] }) {
   const header = (
     <PageHeader
       title="Guidelines"
@@ -98,28 +97,7 @@ export function HomeView() {
     />
   );
 
-  if (state === "loading")
-    return (
-      <>
-        {header}
-        <div className="grid gap-4 lg:grid-cols-4">
-          <BlockSkeleton className="h-14 lg:col-span-4" />
-          {[0, 1, 2, 3].map((i) => (
-            <BlockSkeleton key={i} className="h-32" />
-          ))}
-          <BlockSkeleton className="h-64 lg:col-span-2" />
-          <BlockSkeleton className="h-64 lg:col-span-2" />
-        </div>
-      </>
-    );
-  if (state === "error")
-    return (
-      <>
-        {header}
-        <ErrorState title="Couldn’t load your guides">The database didn’t respond within 10 seconds. Your guides are safe. Check your connection and try again.</ErrorState>
-      </>
-    );
-  if (state === "empty")
+  if (guides.length === 0)
     return (
       <>
         {header}
@@ -134,10 +112,11 @@ export function HomeView() {
               <ButtonLink variant="outline" href="/guides/import">
                 <Upload /> Import from Excel
               </ButtonLink>
+              <LoadSampleButton />
             </>
           }
         >
-          Turn a fix you’ve already done into a guide: paste your notes or a screenshot and the AI drafts it for you to check. You can also import an existing Excel log.
+          Turn a fix you’ve already done into a guide: paste your notes or a screenshot and the AI drafts it for you to check. You can also import an existing Excel log, or load 10 sample guides to try things out.
         </EmptyState>
       </>
     );
@@ -145,12 +124,34 @@ export function HomeView() {
   return (
     <>
       {header}
-      <SearchFirst />
+      <SearchFirst guides={guides} />
     </>
   );
 }
 
-function SearchFirst() {
+function LoadSampleButton() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <Button
+      variant="ghost"
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          const res = await loadSampleData();
+          if (res.ok) {
+            toast.success(`Added ${res.guides} sample guides`, { description: "Plus sample analyses, templates and version notes." });
+            router.refresh();
+          } else toast.error(res.error);
+        })
+      }
+    >
+      {pending ? <Loader2 className="animate-spin" /> : <Sparkles />} Load sample data
+    </Button>
+  );
+}
+
+function SearchFirst({ guides }: { guides: Guide[] }) {
   const toCheck = unverified(guides);
   return (
     <div className="flex flex-col gap-6">

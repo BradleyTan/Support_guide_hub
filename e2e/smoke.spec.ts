@@ -1,10 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-/** Every prototype screen, with a heading we expect to see. */
+/** Every app screen, with the heading we expect to see when signed in. */
 const routes: [string, RegExp][] = [
   ["/", /Guidelines/],
   ["/guides", /Guide library/],
-  ["/guides/G-1051", /SQL Server/],
   ["/guides/new", /New guide/],
   ["/guides/import", /Import guides/],
   ["/search?q=server%20not%20found", /Search/],
@@ -16,50 +15,90 @@ const routes: [string, RegExp][] = [
   ["/settings", /Settings/],
 ];
 
-for (const [path, heading] of routes) {
-  test(`${path} renders without console errors`, async ({ page }) => {
-    const errors: string[] = [];
-    page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-    page.on("pageerror", (e) => errors.push(e.message));
-
-    await page.goto(path);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
-    // No horizontal page scroll at any viewport.
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(overflow, "page scrolls horizontally").toBeLessThanOrEqual(1);
-    expect(errors, errors.join("\n")).toEqual([]);
-  });
+function collectErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.message));
+  return errors;
 }
 
-test("unknown guide shows the not-found page", async ({ page }) => {
-  await page.goto("/guides/G-9999");
-  await expect(page.getByText("That page or guide doesn’t exist")).toBeVisible();
-});
+async function noSideScroll(page: Page) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow, "page scrolls horizontally").toBeLessThanOrEqual(1);
+}
 
-test("every preview state renders on the guide library", async ({ page, isMobile }) => {
-  test.skip(isMobile, "state switcher checked on desktop");
-  await page.goto("/guides");
-  for (const [label, expected] of [
-    ["Empty", "No guides yet"],
-    ["Loading", null],
-    ["Error", "Couldn’t load guides"],
-    ["With data", "G-1051"],
-  ] as const) {
-    await page.getByRole("combobox", { name: /Preview state/ }).click();
-    await page.getByRole("option", { name: label }).click();
-    if (expected) await expect(page.getByText(expected).first()).toBeVisible();
-    else await expect(page.getByLabel("Loading")).toBeVisible();
+test.describe("signed out", () => {
+  test("login page renders without errors", async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto("/login");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Sign in/);
+    await noSideScroll(page);
+    expect(errors, errors.join("\n")).toEqual([]);
+  });
+
+  for (const [path] of routes) {
+    test(`${path} redirects to login`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/login/);
+    });
   }
+
+  test("login form validates input before contacting the server", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill("not-an-email");
+    await page.getByLabel("Password").fill("short");
+    await page.getByRole("button", { name: "Sign in", exact: true }).last().click();
+    await expect(page.locator("form").getByRole("alert")).toContainText(/valid email/);
+  });
+
+  test("wrong password shows a clear message", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill("nobody@example.invalid");
+    await page.getByLabel("Password").fill("wrong-password-123");
+    await page.getByRole("button", { name: "Sign in", exact: true }).last().click();
+    await expect(page.locator("form").getByRole("alert")).toContainText(/incorrect/);
+  });
 });
 
-test("analyst journal entries all balance", async ({ page }) => {
-  await page.goto("/analyst");
-  await expect(page.getByText("Dr = Cr")).toHaveCount(5);
-  await expect(page.getByText("Does not balance")).toHaveCount(0);
-});
+// Signed-in checks need a dedicated test account: set E2E_EMAIL and E2E_PASSWORD.
+const email = process.env.E2E_EMAIL;
+const password = process.env.E2E_PASSWORD;
 
-test("upload rejects wrong file type", async ({ page }) => {
-  await page.goto("/guides/new");
-  await page.locator('input[type=file][multiple]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
-  await expect(page.getByText("this file type isn't supported")).toBeVisible();
+test.describe("signed in", () => {
+  test.skip(!email || !password, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(email!);
+    await page.getByLabel("Password").fill(password!);
+    await page.getByRole("button", { name: "Sign in", exact: true }).last().click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  for (const [path, heading] of routes) {
+    test(`${path} renders without console errors`, async ({ page }) => {
+      const errors = collectErrors(page);
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
+      await noSideScroll(page);
+      expect(errors, errors.join("\n")).toEqual([]);
+    });
+  }
+
+  test("unknown guide shows the not-found page", async ({ page }) => {
+    await page.goto("/guides/G-99999");
+    await expect(page.getByText("That page or guide doesn’t exist")).toBeVisible();
+  });
+
+  test("upload rejects wrong file type", async ({ page }) => {
+    await page.goto("/guides/new");
+    await page.locator("input[type=file][multiple]").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
+    await expect(page.getByText("this file type isn't supported")).toBeVisible();
+  });
+
+  test("sign out returns to the login page", async ({ page, isMobile }) => {
+    test.skip(isMobile, "sidebar sign-out checked on desktop");
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/login/);
+  });
 });

@@ -15,14 +15,19 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { allNavItems } from "@/components/shell/nav";
-import { guides } from "@/lib/mock/guides";
+
+export interface PaletteGuide {
+  id: string;
+  title: string;
+  errorMessage?: string;
+}
 
 function isTyping(el: EventTarget | null) {
   const t = el as HTMLElement | null;
   return !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
 }
 
-export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function CommandPalette({ open, onOpenChange, guides }: { open: boolean; onOpenChange: (open: boolean) => void; guides: PaletteGuide[] }) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
 

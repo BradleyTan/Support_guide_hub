@@ -9,33 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/shared/page-header";
 import { SmartInput } from "@/components/shared/smart-input";
-import { EmptyState, ErrorState, BlockSkeleton } from "@/components/shared/states";
-import { useDemoState } from "@/components/shell/demo-state";
+import { EmptyState, BlockSkeleton } from "@/components/shared/states";
 import { AnalysisResult } from "@/components/analyst/analysis-result";
-import { analyses } from "@/lib/mock/analyses";
 import { formatDate } from "@/lib/format";
-import type { ChatMessage } from "@/lib/types";
+import type { Analysis, ChatMessage } from "@/lib/types";
 
 type Phase = "result" | "thinking" | "clarify";
 
-export function AnalystView() {
-  const { state } = useDemoState();
-  const [activeId, setActiveId] = useState(analyses[0].id);
+export function AnalystView({ analyses }: { analyses: Analysis[] }) {
+  const [activeId, setActiveId] = useState(analyses[0]?.id ?? "");
   const [phase, setPhase] = useState<Phase>("result");
-  const [chat, setChat] = useState<ChatMessage[]>(analyses[0].chat);
+  const [chat, setChat] = useState<ChatMessage[]>(analyses[0]?.chat ?? []);
   const [chatKey, setChatKey] = useState(0);
-  const active = analyses.find((a) => a.id === activeId)!;
+  const active = analyses.find((a) => a.id === activeId);
 
   function open(id: string) {
     setActiveId(id);
     setPhase("result");
-    setChat(analyses.find((a) => a.id === id)!.chat);
+    setChat(analyses.find((a) => a.id === id)?.chat ?? []);
   }
 
   function analyse(text: string) {
-    // Too little detail: the analyst asks instead of guessing.
+    // Too little detail: the analyst asks instead of guessing. (Live analysis arrives in Phase 4.)
     setPhase(text.trim().length < 60 ? "clarify" : "thinking");
-    if (text.trim().length >= 60) setTimeout(() => open(analyses[0].id), 1500);
+    if (text.trim().length >= 60) setTimeout(() => open(analyses[0]?.id ?? ""), 1500);
   }
 
   return (
@@ -55,7 +52,7 @@ export function AnalystView() {
           <h2 className="mb-2 flex items-center gap-1.5 text-sm font-medium">
             <History className="size-4 text-muted-foreground" /> History
           </h2>
-          {state === "empty" ? (
+          {analyses.length === 0 ? (
             <p className="text-sm text-muted-foreground">Your analyses are saved here so you can search and reopen them.</p>
           ) : (
             <ul className="space-y-1">
@@ -93,7 +90,7 @@ export function AnalystView() {
             onSubmit={(text) => analyse(text)}
           />
 
-          {state === "loading" || phase === "thinking" ? (
+          {phase === "thinking" ? (
             <div className="space-y-3" role="status">
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" /> Checking your guides and official sources, then working out the entries…
@@ -101,14 +98,12 @@ export function AnalystView() {
               <BlockSkeleton className="h-24" />
               <BlockSkeleton className="h-64" />
             </div>
-          ) : state === "error" ? (
-            <ErrorState title="The analysis didn’t finish">The AI service is busy (rate limit). Your scenario is kept. Try again in about a minute.</ErrorState>
-          ) : state === "empty" ? (
-            <EmptyState icon={Calculator} title="Describe a scenario to get started">
-              Include amounts, dates, currency rates and tax codes if you know them. You can also attach a statement or invoice photo and I’ll read the figures.
-            </EmptyState>
           ) : phase === "clarify" ? (
-            <Clarify onDone={() => open(analyses[0].id)} />
+            <Clarify onDone={() => open(analyses[0]?.id ?? "")} />
+          ) : !active ? (
+            <EmptyState icon={Calculator} title="Describe a scenario to get started">
+              Include amounts, dates, currency rates and tax codes if you know them. You can also attach a statement or invoice photo and I’ll read the figures. Live analysis is connected in Phase 4.
+            </EmptyState>
           ) : (
             <>
               <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border bg-card p-4">

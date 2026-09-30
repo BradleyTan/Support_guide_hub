@@ -11,9 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
 import { SmartInput, type ExtractedField } from "@/components/shared/smart-input";
-import { guides } from "@/lib/mock/guides";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
-import { CATEGORIES, PRODUCTS } from "@/lib/types";
+import { CATEGORIES, PRODUCTS, type Guide } from "@/lib/types";
 
 interface FormState {
   title: string;
@@ -89,7 +88,7 @@ function PickSelect({ id, value, onChange, options, placeholder }: { id: string;
   );
 }
 
-export function GuideForm() {
+export function GuideForm({ guides }: { guides: Guide[] }) {
   const [f, setF] = useState<FormState>(blank);
   const [drafting, setDrafting] = useState(false);
   const [fromAi, setFromAi] = useState(false);
@@ -100,7 +99,7 @@ export function GuideForm() {
     if (f.title.trim().length < 8) return undefined;
     const top = searchGuides(guides, `${f.title} ${f.errorMessage}`)[0];
     return top && top.score >= 6 ? top.guide : undefined;
-  }, [f.title, f.errorMessage]);
+  }, [guides, f.title, f.errorMessage]);
 
   function draftWithAi() {
     setDrafting(true);

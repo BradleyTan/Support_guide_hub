@@ -10,12 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
-import { EmptyState, ErrorState, ListSkeleton } from "@/components/shared/states";
-import { useDemoState } from "@/components/shell/demo-state";
-import { guides } from "@/lib/mock/guides";
+import { EmptyState } from "@/components/shared/states";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
-import { CATEGORIES, PRODUCTS } from "@/lib/types";
+import { CATEGORIES, PRODUCTS, type Guide } from "@/lib/types";
 
 const ALL = "all";
 
@@ -38,15 +36,24 @@ function FilterSelect({ label, allLabel, value, onChange, options }: { label: st
   );
 }
 
-export function GuideList({ initialProduct, initialModule, initialVerified }: { initialProduct?: string; initialModule?: string; initialVerified?: string }) {
-  const { state } = useDemoState();
+export function GuideList({
+  guides,
+  initialProduct,
+  initialModule,
+  initialVerified,
+}: {
+  guides: Guide[];
+  initialProduct?: string;
+  initialModule?: string;
+  initialVerified?: string;
+}) {
   const [q, setQ] = useState("");
   const [product, setProduct] = useState(initialProduct ?? ALL);
   const [module, setModule] = useState(initialModule ?? ALL);
   const [category, setCategory] = useState(ALL);
   const [verified, setVerified] = useState(initialVerified ?? ALL);
 
-  const modules = useMemo(() => [...new Set(guides.filter((g) => product === ALL || g.product === product).map((g) => g.module))].sort(), [product]);
+  const modules = useMemo(() => [...new Set(guides.filter((g) => product === ALL || g.product === product).map((g) => g.module))].sort(), [guides, product]);
 
   const rows = useMemo(() => {
     let list = q.trim() ? searchGuides(guides, q).map((r) => r.guide) : [...guides].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -54,8 +61,8 @@ export function GuideList({ initialProduct, initialModule, initialVerified }: { 
     if (module !== ALL) list = list.filter((g) => g.module === module);
     if (category !== ALL) list = list.filter((g) => g.category === category);
     if (verified !== ALL) list = list.filter((g) => g.verified === (verified === "yes"));
-    return state === "empty" ? [] : list;
-  }, [q, product, module, category, verified, state]);
+    return list;
+  }, [guides, q, product, module, category, verified]);
 
   const filtered = q || product !== ALL || module !== ALL || category !== ALL || verified !== ALL;
   function clear() {
@@ -122,11 +129,7 @@ export function GuideList({ initialProduct, initialModule, initialVerified }: { 
         )}
       </div>
 
-      {state === "loading" ? (
-        <ListSkeleton />
-      ) : state === "error" ? (
-        <ErrorState title="Couldn’t load guides">The request timed out. Nothing was lost. Try again, or check your internet connection.</ErrorState>
-      ) : state === "empty" && !filtered ? (
+      {guides.length === 0 ? (
         <EmptyState
           icon={BookText}
           title="No guides yet"

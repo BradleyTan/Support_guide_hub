@@ -8,10 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
-export const MAX_FILE_MB = 10;
-export const MAX_FILES = 6;
-const COMPRESS_OVER_MB = 2;
+import { ACCEPTED_TYPES, COMPRESS_OVER_MB, MAX_FILE_MB, MAX_FILES, validateFile } from "@/lib/files";
 
 export interface InputFile {
   id: string;
@@ -27,13 +24,6 @@ export interface ExtractedField {
   label: string;
   value: string;
   uncertain?: boolean;
-}
-
-/** Validates a file against the accepted types and size limit. Returns an error message or null. */
-export function validateFile(f: { name: string; type: string; size: number }) {
-  if (!ACCEPTED_TYPES.includes(f.type)) return `${f.name}: this file type isn't supported. Use PNG, JPG, WEBP or PDF.`;
-  if (f.size > MAX_FILE_MB * 1024 * 1024) return `${f.name} is ${(f.size / 1048576).toFixed(1)} MB. The limit is ${MAX_FILE_MB} MB per file.`;
-  return null;
 }
 
 type ReadState = "idle" | "reading" | "done" | "unclear";

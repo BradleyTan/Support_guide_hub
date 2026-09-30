@@ -8,13 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
-import { BlockSkeleton, ErrorState } from "@/components/shared/states";
-import { useDemoState } from "@/components/shell/demo-state";
-import { getGuide, guides } from "@/lib/mock/guides";
-import { formatDate, TODAY } from "@/lib/format";
+import { EmptyState } from "@/components/shared/states";
+import { ButtonLink } from "@/components/ui/button";
+import { formatDate, now } from "@/lib/format";
+import type { Guide } from "@/lib/types";
+import { BookOpenCheck } from "lucide-react";
 
-export function SopBuilder({ initialGuide }: { initialGuide?: string }) {
-  const { state } = useDemoState();
+export function SopBuilder({ guides, initialGuide }: { guides: Guide[]; initialGuide?: string }) {
+  if (guides.length === 0)
+    return (
+      <>
+        <PageHeader title="SOP builder" description="Turn a guide into a step-by-step procedure you can hand to a client or a colleague as a PDF." />
+        <EmptyState icon={BookOpenCheck} title="You need a guide first" action={<ButtonLink href="/guides/new">Write a guide</ButtonLink>}>
+          SOPs are built from your guides. Write one, or load the sample data from the Home page.
+        </EmptyState>
+      </>
+    );
+  return <SopEditor guides={guides} initialGuide={initialGuide} />;
+}
+
+function SopEditor({ guides, initialGuide }: { guides: Guide[]; initialGuide?: string }) {
+  const getGuide = (id: string) => guides.find((x) => x.id === id);
   const [guideId, setGuideId] = useState(getGuide(initialGuide ?? "") ? initialGuide! : guides[0].id);
   const g = getGuide(guideId)!;
   const [title, setTitle] = useState(`SOP: ${g.title}`);
@@ -78,15 +92,11 @@ export function SopBuilder({ initialGuide }: { initialGuide?: string }) {
           </Button>
         </div>
 
-        {state === "loading" ? (
-          <BlockSkeleton className="h-[32rem]" />
-        ) : state === "error" ? (
-          <ErrorState title="Couldn’t build the SOP">The AI didn’t respond. The guide itself is unchanged. Try again.</ErrorState>
-        ) : (
+        {
           <article aria-label="SOP preview" className="mx-auto w-full max-w-3xl rounded-lg border bg-card p-6 shadow-[0_1px_3px_oklch(0_0_0/0.06)] sm:p-10">
             <header className="border-b pb-4">
               <p className="text-xs text-muted-foreground">
-                Standard operating procedure · v1.0 · {formatDate(TODAY.toISOString())}
+                Standard operating procedure · v1.0 · {formatDate(now().toISOString())}
               </p>
               <h2 className="mt-1 text-xl font-semibold">{title}</h2>
               <dl className="mt-3 grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1 text-sm">
@@ -135,7 +145,7 @@ export function SopBuilder({ initialGuide }: { initialGuide?: string }) {
               </section>
             )}
           </article>
-        )}
+        }
       </div>
     </>
   );

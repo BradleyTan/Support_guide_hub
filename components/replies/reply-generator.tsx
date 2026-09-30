@@ -9,10 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
-import { ErrorState } from "@/components/shared/states";
-import { useDemoState } from "@/components/shell/demo-state";
-import { guides } from "@/lib/mock/guides";
-import { analyses } from "@/lib/mock/analyses";
+import type { Analysis, Guide } from "@/lib/types";
 
 type Lang = "en" | "ms" | "zh";
 type Channel = "email" | "whatsapp";
@@ -62,9 +59,8 @@ function Segmented<T extends string>({ label, value, onChange, options }: { labe
   );
 }
 
-export function ReplyGenerator({ initialSource }: { initialSource?: string }) {
-  const { state } = useDemoState();
-  const [source, setSource] = useState(initialSource ?? "guide:G-1051");
+export function ReplyGenerator({ guides, analyses, initialSource }: { guides: Guide[]; analyses: Analysis[]; initialSource?: string }) {
+  const [source, setSource] = useState(initialSource ?? (guides[0] ? `guide:${guides[0].id}` : ""));
   const [lang, setLang] = useState<Lang>("en");
   const [channel, setChannel] = useState<Channel>("email");
   const [busy, setBusy] = useState(false);
@@ -144,7 +140,7 @@ export function ReplyGenerator({ initialSource }: { initialSource?: string }) {
             }}
             options={(Object.keys(langLabel) as Lang[]).map((l) => ({ value: l, label: langLabel[l] }))}
           />
-          <p className="text-xs text-muted-foreground">The prototype always shows the sample reply for G-1051 (SQL Server connection).</p>
+          <p className="text-xs text-muted-foreground">Until AI replies are connected (Phase 6), this shows a sample reply about a SQL Server connection fix.</p>
         </div>
 
         <section aria-labelledby="draft-h" className="flex flex-col gap-3">
@@ -156,29 +152,25 @@ export function ReplyGenerator({ initialSource }: { initialSource?: string }) {
               {langLabel[lang]} · {channel === "email" ? "Email" : "WhatsApp"} · polite, professional
             </span>
           </div>
-          {state === "error" ? (
-            <ErrorState title="Couldn’t write the reply">The AI service didn’t respond. Your settings are kept. Try again.</ErrorState>
-          ) : (
-            <div className="relative">
-              <Label htmlFor="draft" className="sr-only">
-                Reply draft
-              </Label>
-              <Textarea
-                id="draft"
-                value={state === "empty" ? "" : text}
-                onChange={(e) => setText(e.target.value)}
-                rows={channel === "email" ? 20 : 8}
-                placeholder="Choose a guide or analysis and the draft appears here."
-                className={cn("bg-card leading-relaxed", (busy || state === "loading") && "opacity-40")}
-                lang={lang === "zh" ? "zh" : lang}
-              />
-              {(busy || state === "loading") && (
-                <p className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
-                  <Loader2 className="size-4 animate-spin" /> Writing…
-                </p>
-              )}
-            </div>
-          )}
+          <div className="relative">
+            <Label htmlFor="draft" className="sr-only">
+              Reply draft
+            </Label>
+            <Textarea
+              id="draft"
+              value={source ? text : ""}
+              onChange={(e) => setText(e.target.value)}
+              rows={channel === "email" ? 20 : 8}
+              placeholder="Choose a guide or analysis and the draft appears here."
+              className={cn("bg-card leading-relaxed", busy && "opacity-40")}
+              lang={lang === "zh" ? "zh" : lang}
+            />
+            {busy && (
+              <p className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
+                <Loader2 className="size-4 animate-spin" /> Writing…
+              </p>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => {

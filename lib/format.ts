@@ -1,5 +1,7 @@
-/** Fixed "today" so the prototype's relative dates stay stable; replaced by real time in Phase 1. */
-export const TODAY = new Date("2026-09-30T09:00:00+08:00");
+/** Current time. A function (not a constant) so long-running server processes don't freeze "today". */
+export function now() {
+  return new Date();
+}
 
 const rm = new Intl.NumberFormat("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -28,9 +30,9 @@ export function formatDateTime(iso: string) {
   return dateTimeFmt.format(new Date(iso));
 }
 
-/** Whole days from `iso` to TODAY (positive = in the past). */
-export function daysAgo(iso: string) {
-  return Math.floor((TODAY.getTime() - new Date(iso).getTime()) / 86_400_000);
+/** Whole days from `iso` to now (positive = in the past). */
+export function daysAgo(iso: string, from: Date = now()) {
+  return Math.floor((from.getTime() - new Date(iso).getTime()) / 86_400_000);
 }
 
 export function relativeDay(iso: string) {
