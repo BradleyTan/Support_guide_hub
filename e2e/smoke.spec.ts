@@ -58,6 +58,33 @@ test.describe("signed out", () => {
     await page.getByRole("button", { name: "Sign in", exact: true }).last().click();
     await expect(page.locator("form").getByRole("alert")).toContainText(/incorrect/);
   });
+
+  test("forgot password opens the reset form, validates the email and goes back", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("button", { name: "Forgot password?" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Reset your password");
+    await page.getByLabel("Email").fill("not-an-email");
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.locator("form").getByRole("alert")).toContainText(/valid email/);
+    await page.getByRole("button", { name: "Back to sign in" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Sign in/);
+  });
+
+  test("an expired reset link opens the reset form with an explanation", async ({ page }) => {
+    await page.goto("/login?error=reset");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Reset your password");
+    await expect(page.locator("form").getByRole("alert")).toContainText(/expired/);
+  });
+
+  test("a bad email link is rejected", async ({ page }) => {
+    await page.goto("/auth/confirm?code=not-a-real-code&next=/reset-password");
+    await expect(page).toHaveURL(/\/login\?error=reset/);
+  });
+
+  test("the set-new-password page needs a valid reset link", async ({ page }) => {
+    await page.goto("/reset-password");
+    await expect(page).toHaveURL(/\/login/);
+  });
 });
 
 // Signed-in checks need a dedicated test account: set E2E_EMAIL and E2E_PASSWORD.
@@ -94,6 +121,19 @@ test.describe("signed in", () => {
     await page.goto("/guides/new");
     await page.locator("input[type=file][multiple]").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
     await expect(page.getByText("this file type isn't supported")).toBeVisible();
+  });
+
+  test("set-new-password form checks length and matching before saving", async ({ page }) => {
+    await page.goto("/reset-password");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Set a new password");
+    await page.getByLabel("New password", { exact: true }).fill("short");
+    await page.getByLabel("Confirm new password").fill("short");
+    await page.getByRole("button", { name: "Save new password" }).click();
+    await expect(page.locator("form").getByRole("alert")).toContainText(/at least 8/);
+    await page.getByLabel("New password", { exact: true }).fill("a-long-password-1");
+    await page.getByLabel("Confirm new password").fill("a-different-password-2");
+    await page.getByRole("button", { name: "Save new password" }).click();
+    await expect(page.locator("form").getByRole("alert")).toContainText(/don’t match/);
   });
 
   test("sign out returns to the login page", async ({ page, isMobile }) => {

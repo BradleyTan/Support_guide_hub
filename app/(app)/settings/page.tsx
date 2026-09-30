@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Download, RotateCcw, X } from "lucide-react";
+import { Download, KeyRound, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -121,6 +121,14 @@ export default function SettingsPage() {
               </Button>
             </form>
           </div>
+        </Card>
+
+        <Card title="Account">
+          <Row title="Password" description="Change the password you use to sign in. If you forget it, use “Forgot password?” on the sign-in page.">
+            <ButtonLink variant="outline" href="/reset-password">
+              <KeyRound /> Change password
+            </ButtonLink>
+          </Row>
         </Card>
 
         <Card title="Your data">
