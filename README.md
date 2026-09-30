@@ -13,7 +13,6 @@ npm run dev
 
 Open http://localhost:3001.
 
-- **Home layout options:** `/` (Option A, search-first) and `/?style=b` (Option B, library shelf).
 - **Preview state** (top bar): switch any screen between *With data*, *Empty*, *Loading* and *Error*.
 - **Keyboard:** `Ctrl K` command palette · `/` search · `N` new guide.
 

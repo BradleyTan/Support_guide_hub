@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 /** Every prototype screen, with a heading we expect to see. */
 const routes: [string, RegExp][] = [
   ["/", /Guidelines/],
-  ["/?style=b", /Guidelines/],
   ["/guides", /Guide library/],
   ["/guides/G-1051", /SQL Server/],
   ["/guides/new", /New guide/],

@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 3001;
+// Tests run against a production build on its own port, so they never race the dev server's on-demand compiler.
+const PORT = 3100;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -13,9 +14,9 @@ export default defineConfig({
     { name: "phone", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: "npm run dev", // serves on PORT (see package.json)
+    command: `npm run build && npx next start --port ${PORT}`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: true,
-    timeout: 180_000,
+    reuseExistingServer: false,
+    timeout: 300_000,
   },
 });

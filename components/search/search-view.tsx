@@ -19,13 +19,9 @@ import { officialResults } from "@/lib/mock/library";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
 import { PRODUCTS } from "@/lib/types";
+import { googleFallbackUrl } from "@/lib/official-sites";
 
-const AUTOCOUNT_SITES = ["autocountsoft.com", "wiki.autocountsoft.com"];
-
-function googleFallback(q: string) {
-  const sites = AUTOCOUNT_SITES.map((s) => `site:${s}`).join(" OR ");
-  return `https://www.google.com/search?q=${encodeURIComponent(`${q} (${sites})`)}`;
-}
+const googleFallback = (q: string) => googleFallbackUrl(q);
 
 function SectionTitle({ id, n, icon: Icon, title, meta }: { id: string; n: string; icon: typeof BookText; title: string; meta?: React.ReactNode }) {
   return (

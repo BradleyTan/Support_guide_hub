@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
+import { OFFICIAL_SITES } from "@/lib/official-sites";
 
 const MODELS = [
   { value: "claude-opus-5-5", label: "Claude Opus 5.5 (best reasoning)" },
@@ -55,7 +56,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export default function SettingsPage() {
   const [mask, setMask] = useState(true);
-  const [domains, setDomains] = useState(["autocountsoft.com", "wiki.autocountsoft.com"]);
+  const [domains, setDomains] = useState<string[]>(OFFICIAL_SITES.map((s) => s.domain));
   const [newDomain, setNewDomain] = useState("");
 
   return (
@@ -90,7 +91,7 @@ export default function SettingsPage() {
           </Row>
           <div className="py-4">
             <p className="text-sm font-medium">Allowed websites</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Official search only returns pages from these sites. Confirm this list; the forum and help sites are still to be verified.</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">Official search only returns pages from these sites, including the Accounting and HRMS help centres.</p>
             <ul className="mt-3 flex flex-wrap gap-2">
               {domains.map((d) => (
                 <li key={d} className="inline-flex h-7 items-center gap-1 rounded-md border bg-background pr-1 pl-2 font-mono text-xs">
