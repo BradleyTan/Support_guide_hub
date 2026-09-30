@@ -16,6 +16,8 @@ A personal guidelines tool for an AutoCount support consultant: a searchable lib
 
 Keyboard: `Ctrl K` command palette · `/` search · `N` new guide.
 
+Before relying on the app for real work, go through [docs/GO-LIVE.md](docs/GO-LIVE.md), which starts with setting up custom SMTP so sign-up and password-reset emails aren't blocked by Supabase's free email allowance.
+
 ## Environment variables
 
 | Name | Where | Notes |
