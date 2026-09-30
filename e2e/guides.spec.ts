@@ -109,8 +109,9 @@ test("import guides from a CSV file", async ({ page }) => {
   await page.goto("/guides/import");
   const csv = [
     "Client,Issue,Software,Solution",
-    `Secret Client Sdn Bhd,"${RUN} Import row one",Accounting,"Step A; Step B"`,
-    `,"${RUN} Import row two",Payroll,"Step C"`,
+    // Titles differ clearly; near-identical titles would (correctly) be flagged as possible duplicates.
+    `Secret Client Sdn Bhd,"${RUN} Bank feed import stops at 50 lines",Accounting,"Step A; Step B"`,
+    `,"${RUN} Payslip emails bounce for staff with Gmail",Payroll,"Step C"`,
     `,,POS,"no title"`,
   ].join("\n");
   await page.locator("#import-file").setInputFiles({ name: "e2e-import.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
@@ -123,8 +124,8 @@ test("import guides from a CSV file", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "2 guides imported" })).toBeVisible();
 
   await page.goto(`/guides`);
-  await page.getByLabel("Filter guides").fill("Import row one");
-  await page.getByRole("link", { name: /Import row one/ }).click();
+  await page.getByLabel("Filter guides").fill("Bank feed import stops");
+  await page.getByRole("link", { name: /Bank feed import stops/ }).click();
   await expect(page.getByText("Step B")).toBeVisible();
   await expect(page.getByText("Imported from e2e-import.csv")).toBeVisible();
   await expect(page.getByText("Secret Client")).toHaveCount(0);
