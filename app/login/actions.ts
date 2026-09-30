@@ -89,8 +89,9 @@ export async function updatePassword(_: AuthState, form: FormData): Promise<Auth
   redirect("/?password=updated");
 }
 
+/** Signs out this device only; other devices (e.g. your phone) stay signed in. */
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
 }

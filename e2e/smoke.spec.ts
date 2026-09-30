@@ -140,5 +140,26 @@ test.describe("signed in", () => {
     test.skip(isMobile, "sidebar sign-out checked on desktop");
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login/);
+    // The session is really gone on this device: protected pages redirect again.
+    await page.goto("/guides");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("signing out one device leaves other devices signed in", async ({ browser, page, isMobile }) => {
+    test.skip(isMobile, "checked once on desktop");
+    const other = await browser.newContext();
+    const otherPage = await other.newPage();
+    await otherPage.goto("/login");
+    await otherPage.getByLabel("Email").fill(email!);
+    await otherPage.getByLabel("Password").fill(password!);
+    await otherPage.getByRole("button", { name: "Sign in", exact: true }).last().click();
+    await expect(otherPage).toHaveURL(/\/$/);
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/login/);
+
+    await otherPage.goto("/guides");
+    await expect(otherPage.getByRole("heading", { level: 1 })).toHaveText(/Guide library/);
+    await other.close();
   });
 });
