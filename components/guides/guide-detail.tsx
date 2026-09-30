@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, FileText, Image as ImageIcon, MessageSquareText, Pencil, Pin, ScrollText } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, Loader2, MessageSquareText, Pencil, Pin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { HowThisWorks } from "@/components/shared/page-header";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProductLabel, Tag, VerifiedBadge } from "@/components/shared/badges";
+import { AttachmentList } from "@/components/guides/attachments";
+import { deleteGuide, restoreGuide, setVerified } from "@/app/(app)/guides/actions";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Guide } from "@/lib/types";
@@ -20,66 +23,111 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-export function GuideDetail({ guide: g, allGuides }: { guide: Guide; allGuides: Guide[] }) {
-  const [verified, setVerified] = useState(g.verified);
+export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; allGuides: Guide[]; userId: string }) {
+  const router = useRouter();
+  const [verifying, startVerify] = useTransition();
+  const [deleting, startDelete] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const similar = searchGuides(allGuides, `${g.title} ${g.tags.join(" ")}`)
     .filter((r) => r.guide.id !== g.id)
     .slice(0, 3);
 
-  const back = (
-    <Link href="/guides" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-      <ArrowLeft className="size-4" /> Guide library
-    </Link>
-  );
+  function toggleVerified() {
+    startVerify(async () => {
+      const res = await setVerified(g.id, !g.verified);
+      if (res.ok) {
+        toast.success(g.verified ? "Marked as unverified" : "Marked as verified");
+        router.refresh();
+      } else toast.error(res.error);
+    });
+  }
+
+  function remove() {
+    startDelete(async () => {
+      const res = await deleteGuide(g.id);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setConfirmOpen(false);
+      toast.success(`${g.id} moved to the bin`, {
+        description: "You can restore it from Settings within 30 days.",
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const back = await restoreGuide(g.id);
+            if (back.ok) {
+              toast.success(`${g.id} restored`);
+              router.push(`/guides/${g.id}`);
+            } else toast.error(back.error);
+          },
+        },
+      });
+      router.push("/guides");
+    });
+  }
 
   return (
     <>
-      {back}
+      <Link href="/guides" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="size-4" /> Guide library
+      </Link>
       <header className="mb-6 flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-mono text-xs text-muted-foreground">{g.id}</span>
           <ProductLabel product={g.product} />
-          <span className="text-xs text-muted-foreground">
-            · {g.module} · v{g.version}
-          </span>
-          <VerifiedBadge verified={verified} />
+          {(g.module || g.version) && (
+            <span className="text-xs text-muted-foreground">
+              {g.module && `· ${g.module}`} {g.version && `· v${g.version}`}
+            </span>
+          )}
+          <VerifiedBadge verified={g.verified} />
         </div>
         <h1 className="max-w-[40ch] text-xl font-semibold tracking-tight sm:text-2xl">{g.title}</h1>
         <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={verified ? "outline" : "default"}
-            onClick={() => {
-              setVerified(!verified);
-              toast(verified ? "Marked as unverified" : "Marked as verified", { description: "Saved to the edit history." });
-            }}
-          >
-            <BadgeCheck /> {verified ? "Mark unverified" : "Mark verified"}
+          <Button size="sm" variant={g.verified ? "outline" : "default"} onClick={toggleVerified} disabled={verifying}>
+            {verifying ? <Loader2 className="animate-spin" /> : <BadgeCheck />} {g.verified ? "Mark unverified" : "Mark verified"}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => toast("Edit mode is mocked", { description: "The real version edits in place and records a revision." })}>
+          <ButtonLink size="sm" variant="outline" href={`/guides/${g.id}/edit`}>
             <Pencil /> Edit
-          </Button>
+          </ButtonLink>
           <ButtonLink size="sm" variant="outline" href={`/replies?guide=${g.id}`}>
             <MessageSquareText /> Draft client reply
           </ButtonLink>
           <ButtonLink size="sm" variant="outline" href={`/sop?guide=${g.id}`}>
             <BookOpenCheck /> Turn into SOP
           </ButtonLink>
+          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmOpen(true)}>
+            <Trash2 /> Delete
+          </Button>
         </div>
       </header>
 
-      <HowThisWorks>
-        Everything here is editable, and every change is saved to the <strong>edit history</strong>. Deleting a guide moves it to a bin for 30 days. Official links you pin from Search appear on the right.
-      </HowThisWorks>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move {g.id} to the bin?</DialogTitle>
+            <DialogDescription>It disappears from the library and search. You can restore it from Settings → Deleted guides within 30 days.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button variant="destructive" onClick={remove} disabled={deleting}>
+              {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />} Move to bin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="flex max-w-[75ch] flex-col gap-6">
-          <Block title="Symptom">
-            <p>{g.symptom}</p>
-          </Block>
+          {g.symptom && (
+            <Block title="Symptom">
+              <p className="whitespace-pre-line">{g.symptom}</p>
+            </Block>
+          )}
           {g.errorMessage && (
             <Block title="Error message">
-              <div className="group relative rounded-md border bg-muted/60 p-3 pr-10 font-mono text-[13px] leading-relaxed">
+              <div className="group relative rounded-md border bg-muted/60 p-3 pr-10 font-mono text-[13px] leading-relaxed whitespace-pre-wrap">
                 {g.errorMessage}
                 <Button
                   variant="ghost"
@@ -98,7 +146,7 @@ export function GuideDetail({ guide: g, allGuides }: { guide: Guide; allGuides: 
           )}
           {g.cause && (
             <Block title="Cause">
-              <p>{g.cause}</p>
+              <p className="whitespace-pre-line">{g.cause}</p>
             </Block>
           )}
           <Block title="Fix">
@@ -113,23 +161,12 @@ export function GuideDetail({ guide: g, allGuides }: { guide: Guide; allGuides: 
           </Block>
           {g.prevention && (
             <Block title="Prevention">
-              <p>{g.prevention}</p>
+              <p className="whitespace-pre-line">{g.prevention}</p>
             </Block>
           )}
-          {g.attachments.length > 0 && (
-            <Block title="Attachments">
-              <ul className="flex flex-wrap gap-2">
-                {g.attachments.map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 text-sm">
-                    {a.kind === "image" ? <ImageIcon className="size-4 text-muted-foreground" /> : a.kind === "pdf" ? <FileText className="size-4 text-muted-foreground" /> : <ScrollText className="size-4 text-muted-foreground" />}
-                    {a.name}
-                    <span className="text-xs text-muted-foreground">{a.sizeKb} KB</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-muted-foreground">Stored privately. Links expire after 10 minutes.</p>
-            </Block>
-          )}
+          <Block title="Attachments">
+            {g.dbId ? <AttachmentList code={g.id} guideDbId={g.dbId} userId={userId} attachments={g.attachments} /> : null}
+          </Block>
         </article>
 
         <aside className="flex flex-col gap-6 text-sm">
@@ -137,19 +174,17 @@ export function GuideDetail({ guide: g, allGuides }: { guide: Guide; allGuides: 
             <dt className="text-muted-foreground">Product</dt>
             <dd>{shortProduct(g.product)}</dd>
             <dt className="text-muted-foreground">Versions</dt>
-            <dd>{g.version}</dd>
+            <dd>{g.version || "—"}</dd>
             <dt className="text-muted-foreground">Module</dt>
-            <dd>{g.module}</dd>
+            <dd>{g.module || "—"}</dd>
             <dt className="text-muted-foreground">Category</dt>
-            <dd>{g.category}</dd>
+            <dd>{g.category ?? "—"}</dd>
             <dt className="text-muted-foreground">Used</dt>
-            <dd className="num">{g.uses} times</dd>
-            <dt className="text-muted-foreground">Tags</dt>
-            <dd className="flex flex-wrap gap-1">
-              {g.tags.map((t) => (
-                <Tag key={t}>{t}</Tag>
-              ))}
+            <dd className="num">
+              {g.uses} time{g.uses === 1 ? "" : "s"}
             </dd>
+            <dt className="text-muted-foreground">Tags</dt>
+            <dd className="flex flex-wrap gap-1">{g.tags.length ? g.tags.map((t) => <Tag key={t}>{t}</Tag>) : "—"}</dd>
           </dl>
 
           <section className="space-y-2">
@@ -183,8 +218,8 @@ export function GuideDetail({ guide: g, allGuides }: { guide: Guide; allGuides: 
           <section className="space-y-2">
             <h2 className="font-medium">Edit history</h2>
             <ol className="space-y-2 border-l pl-3">
-              {g.revisions.map((r) => (
-                <li key={r.at}>
+              {[...g.revisions].reverse().map((r, i) => (
+                <li key={`${r.at}-${i}`}>
                   <span className="block text-xs text-muted-foreground">{formatDateTime(r.at)}</span>
                   {r.summary}
                 </li>

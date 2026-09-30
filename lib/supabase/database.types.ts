@@ -300,7 +300,16 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      similar_guides: {
+        Args: { p_title: string; p_error?: string; p_limit?: number };
+        Returns: { id: string; code: string; title: string; score: number }[];
+      };
+      increment_guide_uses: {
+        Args: { p_guide_id: string };
+        Returns: undefined;
+      };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };

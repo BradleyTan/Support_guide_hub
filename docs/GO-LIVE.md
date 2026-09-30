@@ -26,6 +26,7 @@ Work through this before relying on the app for real client work (Phase 7). Item
 ## Security and data
 
 - [ ] Supabase security advisor shows no issues; `supabase/tests/rls.sql` returns “RLS: all checks passed”.
+- [ ] Optional, **You:** Authentication → Settings (Password security) → turn on **Leaked password protection** (blocks passwords found in known data leaks). The Supabase security advisor flags it while it's off; it may need a paid plan.
 - [ ] Signed-in browser tests use a **separate test account**, not your main one.
 - [ ] Know how to back up: Settings → Export everything, and the `supabase db dump` command in the README.
 - [ ] Free-plan pause: the project pauses after about 7 days without use; resume it from the Supabase dashboard (or upgrade if that becomes a problem).

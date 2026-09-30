@@ -48,7 +48,7 @@ npm run test:unit # unit tests only (Vitest)
 npm run build     # production build
 ```
 
-Browser tests run against a production build on port 3100. Signed-in browser tests run only when `E2E_EMAIL` and `E2E_PASSWORD` for a dedicated test account are set. CI (`.github/workflows/ci.yml`) runs `npm test` on every push.
+Browser tests run against a production build on port 3100. Signed-in browser tests run only when `E2E_EMAIL` and `E2E_PASSWORD` for a dedicated test account are set (Playwright reads them from `.env.local`). Tests that create, edit and delete guides (`e2e/guides.spec.ts`) also need `E2E_ALLOW_WRITES=1`; they only touch guides titled `[e2e] …` and remove them afterwards. Point them at a **test account**, not your real one. CI (`.github/workflows/ci.yml`) runs `npm test` on every push.
 
 ## Structure
 

@@ -39,11 +39,13 @@ export interface Revision {
 /** A reusable troubleshooting or how-to guideline. */
 export interface Guide {
   id: string; // e.g. "G-1051"
+  dbId?: string; // database uuid (used for attachment storage paths)
+  deletedAt?: string;
   title: string;
   product: Product;
   version: string; // versions it applies to, e.g. "2.1, 2.2"
   module: string;
-  category: Category;
+  category: Category | null;
   symptom: string;
   errorMessage?: string;
   cause?: string;

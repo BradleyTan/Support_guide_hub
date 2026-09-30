@@ -10,11 +10,13 @@ import type { Analysis, Attachment, Category, Confidence, Guide, Product, Releas
 export function rowToGuide(r: Tables<"guides">, extra?: { attachments?: Attachment[]; revisions?: Guide["revisions"] }): Guide {
   return {
     id: r.code,
+    dbId: r.id,
+    deletedAt: r.deleted_at ?? undefined,
     title: r.title,
     product: r.product as Product,
     version: r.version,
     module: r.module,
-    category: (r.category ?? "Installation & Database") as Category,
+    category: r.category as Category | null,
     symptom: r.symptom,
     errorMessage: r.error_message ?? undefined,
     cause: r.cause ?? undefined,
@@ -57,6 +59,20 @@ export const getGuide = cache(async (code: string): Promise<Guide | null> => {
     attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
     revisions: (rev.data ?? []).map((v) => ({ at: v.created_at, summary: v.summary })),
   });
+});
+
+/** Guides in the bin (soft-deleted in the last 30 days), newest first. */
+export const getDeletedGuides = cache(async (): Promise<Guide[]> => {
+  const supabase = await createClient();
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const { data, error } = await supabase
+    .from("guides")
+    .select(GUIDE_COLUMNS)
+    .not("deleted_at", "is", null)
+    .gte("deleted_at", since)
+    .order("deleted_at", { ascending: false });
+  if (error) throw new Error(`Couldn’t load the bin: ${error.message}`);
+  return (data as GuideRow[]).map((r) => rowToGuide(asRow(r)));
 });
 
 export const getAnalyses = cache(async (): Promise<Analysis[]> => {
