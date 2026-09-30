@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { embedGuides } from "@/lib/embeddings";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { guides } from "@/lib/mock/guides";
 import { analyses } from "@/lib/mock/analyses";
@@ -51,6 +53,7 @@ export async function loadSampleData(): Promise<SeedResult> {
   ]);
   if (extra.some((r) => r.error)) return { ok: false, error: "Some sample data couldn’t be added. Please try again." };
 
+  after(() => embedGuides(supabase, inserted.map((g) => g.id)));
   revalidatePath("/", "layout");
   return { ok: true, guides: inserted.length };
 }

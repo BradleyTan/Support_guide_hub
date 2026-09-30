@@ -1,27 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { allowWrites } from "./helpers";
 
 /**
  * Guide library write tests: they create, change and delete guides, so they only run when
- * E2E_ALLOW_WRITES=1 and a test account is set. Everything they create has a title starting
- * with "[e2e]" and is permanently removed afterwards.
+ * E2E_ALLOW_WRITES=1 and a test account is set (signed in via auth.setup.ts). Everything they
+ * create has a title starting with "[e2e]" and is permanently removed afterwards.
  */
-const email = process.env.E2E_EMAIL;
-const password = process.env.E2E_PASSWORD;
-const allowWrites = process.env.E2E_ALLOW_WRITES === "1";
 const RUN = `[e2e] ${Date.now()}`;
 
 test.describe.configure({ mode: "serial" });
 test.skip(({ isMobile }) => isMobile, "write tests run once, on desktop");
-test.skip(!email || !password || !allowWrites, "Set E2E_EMAIL, E2E_PASSWORD and E2E_ALLOW_WRITES=1 to run guide write tests");
-
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email!);
-  await page.getByLabel("Password").fill(password!);
-  await page.getByRole("button", { name: "Sign in", exact: true }).last().click();
-  await expect(page).toHaveURL(/\/$/);
-}
+test.skip(!allowWrites, "Set E2E_EMAIL, E2E_PASSWORD and E2E_ALLOW_WRITES=1 to run guide write tests");
 
 async function pick(page: Page, label: string, option: string) {
   await page.getByLabel(label, { exact: true }).click();
@@ -29,9 +19,9 @@ async function pick(page: Page, label: string, option: string) {
 }
 
 test.afterAll(async () => {
-  if (!email || !password || !allowWrites) return;
+  if (!allowWrites) return;
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
-  await sb.auth.signInWithPassword({ email, password });
+  await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
   const { data } = await sb.from("guides").select("id, guide_attachments(storage_path)").like("title", "[e2e]%");
   const paths = (data ?? []).flatMap((g) => g.guide_attachments.map((a) => a.storage_path));
   if (paths.length) await sb.storage.from("attachments").remove(paths);
@@ -40,8 +30,6 @@ test.afterAll(async () => {
 });
 
 test("create, edit, verify, attach, delete and restore a guide", async ({ page }) => {
-  await signIn(page);
-
   // Create
   await page.goto("/guides/new");
   await page.getByRole("button", { name: "Save guide" }).click();
@@ -88,6 +76,18 @@ test("create, edit, verify, attach, delete and restore a guide", async ({ page }
   await page.locator('input[type="file"]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
   await expect(page.getByText("this file type isn't supported")).toBeVisible();
 
+  // Pin an official help-centre article from Search, see it on the guide, then unpin it
+  await page.goto("/search?q=bank%20reconciliation");
+  await page.getByRole("button", { name: /^Pin “/ }).first().click();
+  await page.getByLabel("Find a guide").fill(code);
+  await page.getByRole("button", { name: new RegExp(code) }).click();
+  await expect(page.getByText(`Pinned to ${code}`)).toBeVisible();
+  await page.goto(`/guides/${code}`);
+  const pinned = page.locator("aside section", { has: page.getByText("Pinned official sources") });
+  await expect(pinned.locator('a[href^="https://help.accounting.autocountcloud.com/"]')).toBeVisible();
+  await pinned.getByRole("button", { name: /^Unpin/ }).click();
+  await expect(pinned.getByText("None yet.")).toBeVisible();
+
   // Delete → bin → restore
   await page.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("button", { name: "Move to bin" }).click();
@@ -105,7 +105,6 @@ test("create, edit, verify, attach, delete and restore a guide", async ({ page }
 });
 
 test("import guides from a CSV file", async ({ page }) => {
-  await signIn(page);
   await page.goto("/guides/import");
   const csv = [
     "Client,Issue,Software,Solution",

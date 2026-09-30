@@ -24,10 +24,10 @@ export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
-    return {
-      email,
-      error: error.code === "email_not_confirmed" ? "Please confirm your email first. Check your inbox for the link." : "Email or password is incorrect.",
-    };
+    if (error.code === "email_not_confirmed") return { email, error: "Please confirm your email first. Check your inbox for the link." };
+    if (error.status === 429 || error.code === "over_request_rate_limit") return { email, error: "Too many sign-in attempts. Please wait a few minutes and try again." };
+    if (error.code === "invalid_credentials") return { email, error: "Email or password is incorrect." };
+    return { email, error: "Couldn’t sign in right now. Please try again in a moment." };
   }
   redirect(safeNext(form.get("next")));
 }

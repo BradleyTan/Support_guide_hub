@@ -51,14 +51,18 @@ export const getGuide = cache(async (code: string): Promise<Guide | null> => {
   if (error) throw new Error(`Couldn’t load guide: ${error.message}`);
   if (!row) return null;
   const r = row as GuideRow;
-  const [att, rev] = await Promise.all([
+  const [att, rev, pins] = await Promise.all([
     supabase.from("guide_attachments").select("id, name, kind, size_bytes").eq("guide_id", r.id).order("created_at"),
     supabase.from("guide_revisions").select("created_at, summary").eq("guide_id", r.id).order("created_at"),
+    supabase.from("pins").select("id, title, url, site").eq("guide_id", r.id).order("created_at"),
   ]);
-  return rowToGuide(asRow(r), {
-    attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
-    revisions: (rev.data ?? []).map((v) => ({ at: v.created_at, summary: v.summary })),
-  });
+  return {
+    ...rowToGuide(asRow(r), {
+      attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
+      revisions: (rev.data ?? []).map((v) => ({ at: v.created_at, summary: v.summary })),
+    }),
+    pins: pins.data ?? [],
+  };
 });
 
 /** Guides in the bin (soft-deleted in the last 30 days), newest first. */

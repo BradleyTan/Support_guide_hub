@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { embedGuides } from "@/lib/embeddings";
 import { z } from "zod";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { describeChanges, guideInputSchema, inputToRow, type GuideInput } from "@/lib/guide-schema";
@@ -57,6 +59,8 @@ export async function createGuide(input: unknown): Promise<ActionResult<{ id: st
   const { data, error } = await s.supabase.from("guides").insert(inputToRow(parsed.data)).select("id, code").single();
   if (error || !data) return fail("Couldn’t save the guide. Please try again.");
   await s.supabase.from("guide_revisions").insert({ guide_id: data.id, summary: "Guide created" });
+  // Meaning-search vector, computed after the response so saving stays fast.
+  after(() => embedGuides(s.supabase, [data.id]));
   refresh(data.code);
   return { ok: true, data };
 }
@@ -89,6 +93,7 @@ export async function updateGuide(code: string, input: unknown): Promise<ActionR
   if (error) return fail("Couldn’t save your changes. Please try again.");
   // The snapshot keeps the previous version so an edit can be traced or undone by hand.
   await s.supabase.from("guide_revisions").insert({ guide_id: guide.id, summary, snapshot: before as unknown as Json });
+  after(() => embedGuides(s.supabase, [guide.id]));
   refresh(code);
   return { ok: true, data: { code } };
 }
@@ -224,6 +229,8 @@ export async function importGuides(rows: unknown, fileName: string): Promise<Act
       return fail(imported ? `Imported ${imported} guides, then the rest failed. Import the remaining rows again.` : "Couldn’t import the guides. Please try again.");
     }
     await s.supabase.from("guide_revisions").insert(data.map((g) => ({ guide_id: g.id, summary: `Imported from ${name}` })));
+    const ids = data.map((g) => g.id);
+    after(() => embedGuides(s.supabase, ids));
     imported += data.length;
   }
   refresh();

@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, Loader2, MessageSquareText, Pencil, Pin, Trash2 } from "lucide-react";
+import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, ExternalLink, Loader2, MessageSquareText, Pencil, Pin, Trash2, X } from "lucide-react";
+import { unpin } from "@/app/(app)/search/actions";
 import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -191,13 +192,40 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
             <h2 className="flex items-center gap-1.5 font-medium">
               <Pin className="size-3.5" /> Pinned official sources
             </h2>
-            <p className="text-xs text-muted-foreground">
-              None yet. Pin useful AutoCount pages from{" "}
-              <Link href={`/search?q=${encodeURIComponent(g.title)}`} className="text-primary hover:underline">
-                Search
-              </Link>{" "}
-              and they appear here.
-            </p>
+            {g.pins?.length ? (
+              <ul className="space-y-2">
+                {g.pins.map((p) => (
+                  <li key={p.id} className="group flex items-start gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex items-start gap-1 text-primary hover:underline">
+                        {p.title} <ExternalLink className="mt-0.5 size-3 shrink-0" />
+                      </a>
+                      <span className="block text-xs text-muted-foreground">{p.site}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={`Unpin ${p.title}`}
+                      onClick={async () => {
+                        const res = await unpin(p.id);
+                        if (res.ok) router.refresh();
+                        else toast.error(res.error);
+                      }}
+                    >
+                      <X />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                None yet. Pin useful AutoCount pages from{" "}
+                <Link href={`/search?q=${encodeURIComponent(g.title)}`} className="text-primary hover:underline">
+                  Search
+                </Link>{" "}
+                and they appear here.
+              </p>
+            )}
           </section>
 
           {similar.length > 0 && (

@@ -159,6 +159,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["guides"]["Insert"]>;
         Relationships: [];
       };
+      official_pages: {
+        Row: {
+          url: string;
+          site: string;
+          title: string;
+          snippet: string;
+          lastmod: string | null;
+          fts: unknown;
+          embedding: string | null;
+          details_fetched_at: string | null;
+          seen_at: string;
+          created_at: string;
+        };
+        // Written only by the refresh-official Edge Function (service role); users can read.
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       pins: {
         Row: {
           created_at: string;
@@ -304,6 +322,24 @@ export type Database = {
       similar_guides: {
         Args: { p_title: string; p_error?: string; p_limit?: number };
         Returns: { id: string; code: string; title: string; score: number }[];
+      };
+      search_guides: {
+        Args: {
+          p_query: string;
+          p_embedding?: string | null;
+          p_product?: string | null;
+          p_module?: string | null;
+          p_version?: string | null;
+          p_tag?: string | null;
+          p_updated_after?: string | null;
+          p_min_similarity?: number;
+          p_limit?: number;
+        };
+        Returns: { id: string; code: string; score: number; matched_by: string[] }[];
+      };
+      search_official_pages: {
+        Args: { p_query: string; p_embedding?: string | null; p_min_similarity?: number; p_limit?: number };
+        Returns: { url: string; site: string; title: string; snippet: string; lastmod: string | null; score: number; matched_by: string[] }[];
       };
       increment_guide_uses: {
         Args: { p_guide_id: string };

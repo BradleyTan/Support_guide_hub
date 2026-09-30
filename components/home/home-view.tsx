@@ -164,7 +164,7 @@ function SearchFirst({ guides }: { guides: Guide[] }) {
               {s}
             </Link>
           ))}
-          <span className="hidden sm:inline">· or paste a screenshot on the Search page</span>
+          <span className="hidden sm:inline">· paste error text exactly as it appears for the best match</span>
         </p>
       </div>
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { freshContext, hasTestAccount, signInFresh } from "./helpers";
 
 /** Every app screen, with the heading we expect to see when signed in. */
 const routes: [string, RegExp][] = [
@@ -28,6 +29,8 @@ async function noSideScroll(page: Page) {
 }
 
 test.describe("signed out", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test("login page renders without errors", async ({ page }) => {
     const errors = collectErrors(page);
     await page.goto("/login");
@@ -87,20 +90,9 @@ test.describe("signed out", () => {
   });
 });
 
-// Signed-in checks need a dedicated test account: set E2E_EMAIL and E2E_PASSWORD.
-const email = process.env.E2E_EMAIL;
-const password = process.env.E2E_PASSWORD;
-
+// Signed-in checks need a dedicated test account (E2E_EMAIL / E2E_PASSWORD); they reuse the session from auth.setup.ts.
 test.describe("signed in", () => {
-  test.skip(!email || !password, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
-
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel("Email").fill(email!);
-    await page.getByLabel("Password").fill(password!);
-    await page.getByRole("button", { name: "Sign in", exact: true }).last().click();
-    await expect(page).toHaveURL(/\/$/);
-  });
+  test.skip(!hasTestAccount, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
 
   for (const [path, heading] of routes) {
     test(`${path} renders without console errors`, async ({ page }) => {
@@ -136,30 +128,24 @@ test.describe("signed in", () => {
     await expect(page.locator("form").getByRole("alert")).toContainText(/don’t match/);
   });
 
-  test("sign out returns to the login page", async ({ page, isMobile }) => {
-    test.skip(isMobile, "sidebar sign-out checked on desktop");
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/login/);
-    // The session is really gone on this device: protected pages redirect again.
-    await page.goto("/guides");
-    await expect(page).toHaveURL(/\/login/);
-  });
-
-  test("signing out one device leaves other devices signed in", async ({ browser, page, isMobile }) => {
+  // Signing out ends a session, so these use their own fresh sign-ins and never touch the shared one.
+  test("sign out returns to the login page, and other devices stay signed in", async ({ browser, isMobile }) => {
     test.skip(isMobile, "checked once on desktop");
-    const other = await browser.newContext();
-    const otherPage = await other.newPage();
-    await otherPage.goto("/login");
-    await otherPage.getByLabel("Email").fill(email!);
-    await otherPage.getByLabel("Password").fill(password!);
-    await otherPage.getByRole("button", { name: "Sign in", exact: true }).last().click();
-    await expect(otherPage).toHaveURL(/\/$/);
+    const deviceA = await freshContext(browser);
+    const deviceB = await freshContext(browser);
+    const a = await deviceA.newPage();
+    const b = await deviceB.newPage();
+    await signInFresh(a);
+    await signInFresh(b);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/login/);
+    await a.getByRole("button", { name: "Sign out" }).click();
+    await expect(a).toHaveURL(/\/login/);
+    await a.goto("/guides");
+    await expect(a).toHaveURL(/\/login/); // really signed out on this device
 
-    await otherPage.goto("/guides");
-    await expect(otherPage.getByRole("heading", { level: 1 })).toHaveText(/Guide library/);
-    await other.close();
+    await b.goto("/guides");
+    await expect(b.getByRole("heading", { level: 1 })).toHaveText(/Guide library/); // the other device is still in
+    await deviceA.close();
+    await deviceB.close();
   });
 });

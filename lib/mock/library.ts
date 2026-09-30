@@ -1,29 +1,4 @@
-import type { OfficialResult, ReleaseNote, Template } from "@/lib/types";
-
-/** Illustrative official-source results. URLs are placeholders until SearXNG is wired up in Phase 3. */
-export const officialResults: OfficialResult[] = [
-  {
-    title: "Troubleshooting database connection (sample result)",
-    url: "https://wiki.autocountsoft.com/wiki/",
-    snippet: "Steps to check the SQL Server service, firewall ports and server name when workstations cannot connect…",
-    site: "wiki.autocountsoft.com",
-    cachedAt: "2026-09-28T02:00:00Z",
-  },
-  {
-    title: "Accounting help centre: solutions (sample result)",
-    url: "https://help.accounting.autocountcloud.com/support/solutions",
-    snippet: "Solution articles for AutoCount Accounting, including database connection and e-Invoice topics…",
-    site: "help.accounting.autocountcloud.com",
-    cachedAt: "2026-09-27T02:00:00Z",
-  },
-  {
-    title: "HRMS help centre (sample result)",
-    url: "https://help.hrms.autocountcloud.com/support/home",
-    snippet: "Help articles for AutoCount HRMS and payroll, such as PCB, EPF and SOCSO settings…",
-    site: "help.hrms.autocountcloud.com",
-    cachedAt: "2026-09-26T02:00:00Z",
-  },
-];
+import type { ReleaseNote, Template } from "@/lib/types";
 
 export const templates: Template[] = [
   {

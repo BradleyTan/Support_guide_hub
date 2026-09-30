@@ -56,9 +56,18 @@ export interface Guide {
   verified: boolean;
   uses: number; // times opened or used in a reply
   attachments: Attachment[];
+  pins?: Pin[];
   createdAt: string;
   updatedAt: string;
   revisions: Revision[];
+}
+
+/** An official AutoCount page saved to a guide from Search. */
+export interface Pin {
+  id: string;
+  title: string;
+  url: string;
+  site: string;
 }
 
 export type Confidence = "High" | "Medium" | "Low";

@@ -17,10 +17,14 @@ Work through this before relying on the app for real client work (Phase 7). Item
 - [ ] **You:** Authentication → URL Configuration → set **Site URL** to the live Vercel address.
 - [ ] **You:** add `https://<your-app>.vercel.app/**` to **Redirect URLs** (keep `http://localhost:3001/**` for local use).
 
-## Deploy (Vercel)
+## Hosting (must stay free)
 
-- [ ] Environment variables set in Vercel (Production + Preview): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `ANTHROPIC_API_KEY`, `SEARXNG_URL`.
-- [ ] SearXNG hosted somewhere the deployed app can reach (free host chosen in Phase 7), or accept the Google-links fallback.
+- [ ] Choose free hosting that allows work use. Vercel's free Hobby plan is for personal, non-commercial projects; alternatives to compare in Phase 7: Cloudflare, Netlify, or running the app on your own PC. Decide before deploying.
+
+## Deploy
+
+- [ ] Environment variables set on the host: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (add `ANTHROPIC_API_KEY` only if AI is turned on later).
+- [ ] Official help-centre index is refreshing: Settings shows ~600+ articles and a recent “last refreshed” date (Supabase jobs `official-pages-sync` daily, `official-pages-details` every 2 minutes).
 - [ ] GitHub repo connected, CI green, repository variables set for the two public Supabase values.
 
 ## Security and data
