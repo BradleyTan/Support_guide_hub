@@ -1,4 +1,9 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+
+// Load local settings (E2E_EMAIL / E2E_PASSWORD, Supabase URL and key) for the test run.
+// Variables already set in the environment (e.g. CI) take precedence; CI has no .env.local.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 // Tests run against a production build on its own port, so they never race the dev server's on-demand compiler.
 const PORT = 3100;
