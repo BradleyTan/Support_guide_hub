@@ -3,6 +3,7 @@ import {
   BookText,
   Calculator,
   FileStack,
+  ChartColumn,
   History,
   LayoutDashboard,
   MessageSquareText,
@@ -17,6 +18,8 @@ export interface NavItem {
   short?: string; // label on the phone tab bar
   icon: LucideIcon;
   shortcut?: string;
+  /** Left out of the phone tab bar (still under "More"). */
+  notOnPhoneTabs?: boolean;
 }
 
 export interface NavGroup {
@@ -32,6 +35,7 @@ export const navGroups: NavGroup[] = [
       { href: "/guides", label: "Guide library", short: "Guides", icon: BookText },
       { href: "/search", label: "Search", icon: Search, shortcut: "/" },
       { href: "/analyst", label: "Accounting analyst", short: "Analyst", icon: Calculator },
+      { href: "/insights", label: "Insights", icon: ChartColumn, notOnPhoneTabs: true },
     ],
   },
   {

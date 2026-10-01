@@ -9,6 +9,7 @@ const routes: [string, RegExp][] = [
   ["/guides/import", /Import guides/],
   ["/search?q=server%20not%20found", /Search/],
   ["/analyst", /Accounting analyst/],
+  ["/insights", /Insights/],
   ["/replies", /Reply generator/],
   ["/sop", /SOP builder/],
   ["/templates", /Templates/],

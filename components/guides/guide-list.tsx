@@ -144,7 +144,7 @@ export function GuideList({
             </>
           }
         >
-          Paste your notes or a screenshot and the AI drafts the guide for you to check. Or import your old Excel log in one go.
+          Write up a fix you’ve already done, or import your old Excel log in one go.
         </EmptyState>
       ) : rows.length === 0 ? (
         <EmptyState icon={SearchX} title="No guides match these filters" action={<Button variant="outline" onClick={clear}>Clear filters</Button>}>

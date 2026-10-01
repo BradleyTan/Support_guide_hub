@@ -102,7 +102,7 @@ function ThemeToggle() {
   );
 }
 
-const mobileTabs = navGroups[0].items;
+const mobileTabs = navGroups[0].items.filter((i) => !i.notOnPhoneTabs);
 
 export function AppShell({ email, guides, children }: { email: string; guides: PaletteGuide[]; children: React.ReactNode }) {
   const pathname = usePathname();

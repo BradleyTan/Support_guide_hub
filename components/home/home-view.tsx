@@ -5,14 +5,15 @@ import { toast } from "sonner";
 import { loadSampleData } from "@/app/(app)/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookText, Calculator, FilePlus2, Landmark, Loader2, NotebookText, ScanBarcode, Search, Sparkles, Upload, Wallet, type LucideIcon } from "lucide-react";
+import { BookText, Calculator, ChartColumn, FilePlus2, Landmark, Loader2, NotebookText, ScanBarcode, Search, Sparkles, Upload, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
-import { countBy, mostUsed, recentlyUpdated, shortProduct, topTags, unverified } from "@/lib/guide-utils";
+import { countBy, recentlyUpdated, shortProduct, topTags, unverified } from "@/lib/guide-utils";
+import { ACTIVITY_DAYS, newGuideHref, type OpenedGuide, type SearchGap } from "@/lib/insights";
 import { formatDate } from "@/lib/format";
 import { PRODUCTS, type Guide, type Product } from "@/lib/types";
 
@@ -84,14 +85,14 @@ function Section({ title, action, children, className }: { title: string; action
   );
 }
 
-export function HomeView({ guides }: { guides: Guide[] }) {
+export function HomeView({ guides, opened, gaps }: { guides: Guide[]; opened: OpenedGuide[]; gaps: SearchGap[] }) {
   const header = (
     <PageHeader
       title="Guidelines"
       description="Your own AutoCount fixes and how-tos, searchable in one place. Tickets stay in Zoho Desk."
       howItWorks={
         <>
-          Search covers <strong>your guides</strong> and <strong>official AutoCount sources</strong>, and the AI writes an answer with citations. “Most used” counts how often you open a guide or use it in a reply.
+          Search covers <strong>your guides</strong> and the <strong>official AutoCount help centres</strong>. “Most opened” counts how often you opened each guide in the last {ACTIVITY_DAYS} days; <strong>Insights</strong> has the full picture, including searches that found no guide.
         </>
       }
     />
@@ -116,7 +117,7 @@ export function HomeView({ guides }: { guides: Guide[] }) {
             </>
           }
         >
-          Turn a fix you’ve already done into a guide: paste your notes or a screenshot and the AI drafts it for you to check. You can also import an existing Excel log, or load 10 sample guides to try things out.
+          Write up a fix you’ve already done as a guide. You can also import an existing Excel log, or load 10 sample guides to try things out.
         </EmptyState>
       </>
     );
@@ -124,7 +125,7 @@ export function HomeView({ guides }: { guides: Guide[] }) {
   return (
     <>
       {header}
-      <SearchFirst guides={guides} />
+      <SearchFirst guides={guides} opened={opened} gaps={gaps} />
     </>
   );
 }
@@ -151,7 +152,8 @@ function LoadSampleButton() {
   );
 }
 
-function SearchFirst({ guides }: { guides: Guide[] }) {
+function SearchFirst({ guides, opened, gaps }: { guides: Guide[]; opened: OpenedGuide[]; gaps: SearchGap[] }) {
+  const openGaps = gaps.filter((g) => !g.coveredBy);
   const toCheck = unverified(guides);
   return (
     <div className="flex flex-col gap-6">
@@ -209,12 +211,16 @@ function SearchFirst({ guides }: { guides: Guide[] }) {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Section title="Most used" action={<span className="text-xs text-muted-foreground">last 90 days</span>}>
-          <ul>
-            {mostUsed(guides).map((g) => (
-              <GuideRow key={g.id} g={g} meta={`used ${g.uses}×`} />
-            ))}
-          </ul>
+        <Section title="Most opened" action={<span className="text-xs text-muted-foreground">last {ACTIVITY_DAYS} days</span>}>
+          {opened.length ? (
+            <ul>
+              {opened.slice(0, 5).map((o) => (
+                <GuideRow key={o.guide.id} g={o.guide} meta={`opened ${o.opens}×`} />
+              ))}
+            </ul>
+          ) : (
+            <p className="px-2 py-3 text-sm text-muted-foreground">Guides you open will be listed here.</p>
+          )}
         </Section>
         <Section
           title="Recently updated"
@@ -234,14 +240,41 @@ function SearchFirst({ guides }: { guides: Guide[] }) {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
         <Section title={`Waiting for you to verify (${toCheck.length})`}>
-          <p className="px-2 pt-1 pb-2 text-xs text-muted-foreground">These fixes haven’t been confirmed yet, so the AI labels them unverified when it quotes them.</p>
+          <p className="px-2 pt-1 pb-2 text-xs text-muted-foreground">Fixes you haven’t confirmed work yet. They show an “Unverified” label wherever they appear.</p>
           <ul>
             {toCheck.map((g) => (
               <GuideRow key={g.id} g={g} meta={<VerifiedBadge verified={false} className="h-4 align-middle text-[10px]" />} />
             ))}
           </ul>
         </Section>
-        <Section title="Common topics">
+        <div className="flex flex-col gap-4">
+          <Section
+            title={`Search gaps (${openGaps.length})`}
+            action={
+              <Link href="/insights" className="text-xs text-primary hover:underline">
+                Insights
+              </Link>
+            }
+          >
+            {openGaps.length ? (
+              <ul>
+                {openGaps.slice(0, 3).map((gap) => (
+                  <li key={gap.query}>
+                    <Link href={newGuideHref(gap.query)} className="group block rounded-md px-2 py-2 transition-colors hover:bg-muted/60">
+                      <span className="block text-sm font-medium break-words group-hover:underline">“{gap.query}”</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">searched {gap.times}×, no guide · write one</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="flex items-start gap-2 px-2 py-2 text-xs text-muted-foreground">
+                <ChartColumn className="mt-0.5 size-3.5 shrink-0" />
+                Searches you repeat that find none of your guides will show up here.
+              </p>
+            )}
+          </Section>
+          <Section title="Common topics">
           <ul className="flex flex-wrap gap-1.5 p-2">
             {topTags(guides, 10).map((t) => (
               <li key={t.name}>
@@ -261,7 +294,8 @@ function SearchFirst({ guides }: { guides: Guide[] }) {
               <Calculator /> Analyse scenario
             </ButtonLink>
           </div>
-        </Section>
+          </Section>
+        </div>
       </div>
     </div>
   );

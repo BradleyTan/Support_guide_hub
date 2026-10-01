@@ -4,7 +4,15 @@ A personal guidelines tool for an AutoCount support consultant: a searchable lib
 
 Everything runs on free tiers and open-source libraries: no paid services, and nothing to run on your PC. AI features are **off** by choice; nothing is sent to an AI service.
 
-> **Status: Phase 4 (accounting analyst).** Login, guide library, search and the scenario calculator are live. The reply generator and SOP builder show sample content until Phase 6.
+> **Status: Phase 5 (insights).** Login, guide library, search, the scenario calculator and Insights are live. The reply generator and SOP builder show sample content until Phase 6.
+
+## Insights
+
+- **Insights** (sidebar; under **More** on a phone) shows the last 12 weeks: guides opened, searches, searches that found none of your guides, guides added and edited, as a weekly chart with a table view.
+- **Search gaps:** things you searched for at least twice where the latest search matched none of your guides, with **Write a guide** (title prefilled) or a note when a guide written since then may cover it. Home shows the top three.
+- **Library health:** guides per product and verified share; guides not verified, missing a cause or fix steps, not edited for over a year, or not opened in 90 days.
+- **What is logged:** opening a guide, and searches made without filters (repeats within 30 minutes count once). Both logs are private to you (RLS) and deleted after 90 days by the nightly `activity-log-cleanup` job. **Settings → Privacy → Clear search history** deletes your searches at once.
+- Opening a guide no longer changes its “last updated” date; only content edits do.
 
 ## Accounting analyst (free, no AI)
 
@@ -47,7 +55,7 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
 - Edge Functions in `supabase/functions/` (`embed`, `refresh-official`).
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.
 - Security checks: run the scripts in `supabase/tests/` in the Supabase SQL editor. Each uses a transaction, rolls back, and reports "all checks passed".

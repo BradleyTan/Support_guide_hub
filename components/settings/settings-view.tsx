@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, KeyRound, Loader2, RotateCcw } from "lucide-react";
 import { restoreGuide } from "@/app/(app)/guides/actions";
+import { clearSearchHistory } from "@/app/(app)/insights/actions";
+import { ACTIVITY_DAYS } from "@/lib/insights";
 import { formatDate } from "@/lib/format";
 import type { Guide } from "@/lib/types";
 import { toast } from "sonner";
@@ -29,6 +31,33 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <h2 className="border-b py-3 font-medium">{title}</h2>
       <div className="divide-y">{children}</div>
     </section>
+  );
+}
+
+function ClearSearchHistory({ count }: { count: number }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  return (
+    <div className="flex items-center gap-3">
+      <span className="num text-sm text-muted-foreground">{count === 1 ? "1 search" : `${count} searches`}</span>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={pending || count === 0}
+        onClick={async () => {
+          if (!confirm("Clear all of your search history? Search gaps on Insights will start again from empty.")) return;
+          setPending(true);
+          const res = await clearSearchHistory();
+          setPending(false);
+          if (res.ok) {
+            toast.success("Search history cleared");
+            router.refresh();
+          } else toast.error(res.error);
+        }}
+      >
+        {pending && <Loader2 className="animate-spin" />} Clear search history
+      </Button>
+    </div>
   );
 }
 
@@ -72,7 +101,7 @@ function DeletedGuides({ guides }: { guides: Guide[] }) {
   );
 }
 
-export function SettingsView({ deleted, indexed }: { deleted: Guide[]; indexed: { count: number; lastRefreshed: string | null } }) {
+export function SettingsView({ deleted, indexed, searchesLogged }: { deleted: Guide[]; indexed: { count: number; lastRefreshed: string | null }; searchesLogged: number }) {
   return (
     <>
       <PageHeader title="Settings" description="Account, official sources and your data." />
@@ -89,6 +118,12 @@ export function SettingsView({ deleted, indexed }: { deleted: Guide[]; indexed: 
           </Row>
           <Row title="Meaning-based search" description="Guide text is turned into search vectors by a model running inside your own Supabase project. It isn’t sent to any other company.">
             <span className="text-sm text-muted-foreground">In your project</span>
+          </Row>
+          <Row
+            title="Search history"
+            description={`Your searches are logged for Insights (search gaps) and kept ${ACTIVITY_DAYS} days. Only you can see them. Clearing removes all of them now; guide-open counts are kept.`}
+          >
+            <ClearSearchHistory count={searchesLogged} />
           </Row>
         </Card>
 

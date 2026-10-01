@@ -87,6 +87,14 @@ export type Database = {
           { foreignKeyName: "guide_attachments_guide_id_fkey"; columns: ["guide_id"]; isOneToOne: false; referencedRelation: "guides"; referencedColumns: ["id"] },
         ];
       };
+      guide_events: {
+        Row: { id: number; user_id: string; guide_id: string; kind: string; created_at: string };
+        Insert: { user_id?: string; guide_id: string; kind?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["guide_events"]["Insert"]>;
+        Relationships: [
+          { foreignKeyName: "guide_events_guide_id_fkey"; columns: ["guide_id"]; isOneToOne: false; referencedRelation: "guides"; referencedColumns: ["id"] },
+        ];
+      };
       guide_revisions: {
         Row: {
           created_at: string;
@@ -246,6 +254,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["release_notes"]["Insert"]>;
         Relationships: [];
       };
+      search_log: {
+        Row: { id: number; user_id: string; query: string; normalized: string; guide_hits: number; created_at: string };
+        Insert: { user_id?: string; query: string; guide_hits: number; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["search_log"]["Insert"]>;
+        Relationships: [];
+      };
       templates: {
         Row: {
           body: string;
@@ -344,6 +358,20 @@ export type Database = {
       increment_guide_uses: {
         Args: { p_guide_id: string };
         Returns: undefined;
+      };
+      normalize_query: { Args: { p: string }; Returns: string };
+      log_search: { Args: { p_query: string; p_guide_hits: number }; Returns: undefined };
+      search_gaps: {
+        Args: { p_days?: number; p_min_times?: number; p_limit?: number };
+        Returns: { query: string; times: number; last_searched: string }[];
+      };
+      top_guides: {
+        Args: { p_days?: number; p_limit?: number };
+        Returns: { guide_id: string; opens: number; last_opened: string }[];
+      };
+      weekly_activity: {
+        Args: { p_weeks?: number };
+        Returns: { week_start: string; opens: number; searches: number; unmatched: number; added: number; edited: number }[];
       };
     };
     Enums: { [_ in never]: never };

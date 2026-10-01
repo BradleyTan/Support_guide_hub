@@ -13,7 +13,7 @@ export function PageHeader({
   title: string;
   description?: string;
   actions?: React.ReactNode;
-  /** Prototype note: what the real version of this screen will do. */
+  /** Short dismissible note explaining how this screen works. */
   howItWorks?: React.ReactNode;
 }) {
   return (
@@ -43,7 +43,7 @@ export function HowThisWorks({ children }: { children: React.ReactNode }) {
     <aside aria-label="How this works" className="relative flex gap-3 rounded-lg border border-info/25 bg-info/[0.06] p-3 pr-10 text-sm">
       <Info className="mt-0.5 size-4 shrink-0 text-info" />
       <div className="space-y-1">
-        <p className="font-medium">How this works in the real version</p>
+        <p className="font-medium">How this works</p>
         <div className="max-w-[80ch] text-muted-foreground [&_strong]:font-medium [&_strong]:text-foreground">{children}</div>
       </div>
       <Button variant="ghost" size="icon-xs" className="absolute top-2 right-2" aria-label="Hide note" onClick={() => setOpen(false)}>

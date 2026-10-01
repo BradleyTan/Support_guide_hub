@@ -53,6 +53,13 @@ export async function searchMyGuides(
     p_limit: 20,
   });
   if (error) return { ok: false, error: "Search didn’t finish. Please try again." };
+  // Feeds Insights → search gaps. Filtered searches aren't logged: no match there doesn't mean no guide exists.
+  // Best effort: a logging failure never affects the search.
+  const filtered = Object.values(f.data).some((v) => v !== null && v !== "");
+  if (!filtered) {
+    const { error: logError } = await supabase.rpc("log_search", { p_query: q.data, p_guide_hits: ranked?.length ?? 0 });
+    if (logError) console.error("[search] could not log search", logError.message);
+  }
   if (!ranked?.length) return { ok: true, hits: [], meaningUsed: !!embedding };
 
   const { data: rows } = await supabase

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 import { analysisResultSchema } from "@/lib/analysis-schema";
 import type { Analysis, Attachment, Category, Confidence, Guide, Product, ReleaseNote, Template, TemplateKind } from "@/lib/types";
+import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
 
 /** Server-side reads. Every query runs as the signed-in user, so RLS limits results to their own rows. */
 
@@ -121,4 +122,55 @@ export const getReleaseNotes = cache(async (): Promise<ReleaseNote[]> => {
     detail: r.detail,
     guideIds: (r.release_note_guides ?? []).flatMap((l) => (l.guides ? [l.guides.code] : [])),
   }));
+});
+
+/** Guides opened in the activity window, most opened first (deleted guides left out). */
+export const getOpenedGuides = cache(async (): Promise<OpenedGuide[]> => {
+  const supabase = await createClient();
+  const [guides, { data, error }] = await Promise.all([getGuides(), supabase.rpc("top_guides", { p_days: ACTIVITY_DAYS, p_limit: 1000 })]);
+  if (error) throw new Error(`Couldn’t load guide activity: ${error.message}`);
+  const byDbId = new Map(guides.map((g) => [g.dbId, g]));
+  return data.flatMap((r) => {
+    const guide = byDbId.get(r.guide_id);
+    return guide ? [{ guide, opens: r.opens, lastOpened: r.last_opened }] : [];
+  });
+});
+
+/**
+ * Searches made at least twice in the activity window whose latest run matched none of your guides.
+ * Each is re-checked (words and typos) so a guide written since then is pointed out.
+ */
+export const getSearchGaps = cache(async (): Promise<SearchGap[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("search_gaps", { p_days: ACTIVITY_DAYS, p_min_times: 2, p_limit: 20 });
+  if (error) throw new Error(`Couldn’t load search gaps: ${error.message}`);
+  return Promise.all(
+    data.map(async (r) => {
+      const gap: SearchGap = { query: r.query, times: r.times, lastSearched: r.last_searched };
+      const { data: hit } = await supabase.rpc("search_guides", { p_query: r.query, p_embedding: null, p_limit: 1 });
+      if (hit?.[0]) {
+        const { data: g } = await supabase.from("guides").select("code, title").eq("id", hit[0].id).maybeSingle();
+        if (g) gap.coveredBy = g;
+      }
+      return gap;
+    }),
+  );
+});
+
+export const getInsights = cache(async (): Promise<Insights> => {
+  const supabase = await createClient();
+  const [guides, opened, gaps, { data: weeks, error }] = await Promise.all([
+    getGuides(),
+    getOpenedGuides(),
+    getSearchGaps(),
+    supabase.rpc("weekly_activity", { p_weeks: 12 }),
+  ]);
+  if (error) throw new Error(`Couldn’t load weekly activity: ${error.message}`);
+  return {
+    weeks: weeks.map((w) => ({ weekStart: w.week_start, opens: w.opens, searches: w.searches, unmatched: w.unmatched, added: w.added, edited: w.edited })),
+    gaps,
+    topOpened: opened.slice(0, 10),
+    notOpened: notOpenedRecently(guides, new Set(opened.map((o) => o.guide.dbId!))),
+    health: libraryHealth(guides),
+  };
 });

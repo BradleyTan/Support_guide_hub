@@ -5,8 +5,9 @@ import { getUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "New guide" };
 
-export default async function NewGuidePage() {
+export default async function NewGuidePage({ searchParams }: PageProps<"/guides/new">) {
   const user = await getUser();
   if (!user) redirect("/login");
-  return <GuideForm mode="create" userId={user.id} />;
+  const { title } = await searchParams;
+  return <GuideForm mode="create" userId={user.id} prefillTitle={typeof title === "string" ? title.slice(0, 300) : undefined} />;
 }

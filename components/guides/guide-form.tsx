@@ -144,6 +144,7 @@ export function GuideForm({
   code,
   guideDbId,
   initial,
+  prefillTitle,
   attachments = [],
 }: {
   mode: "create" | "edit";
@@ -151,10 +152,12 @@ export function GuideForm({
   code?: string;
   guideDbId?: string;
   initial?: GuideInput;
+  /** New guide only: e.g. a search with no matching guide, from Insights. */
+  prefillTitle?: string;
   attachments?: Attachment[];
 }) {
   const router = useRouter();
-  const [f, setF] = useState<FormState>(initial ? toFormState(initial) : blank);
+  const [f, setF] = useState<FormState>(initial ? toFormState(initial) : { ...blank, title: prefillTitle ?? "" });
   const [errors, setErrors] = useState<Errors>({});
   const [files, setFiles] = useState<File[]>([]);
   const [similar, setSimilar] = useState<{ code: string; title: string }[]>([]);
