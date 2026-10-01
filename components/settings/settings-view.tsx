@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Download, KeyRound, Loader2, RotateCcw } from "lucide-react";
 import { restoreGuide } from "@/app/(app)/guides/actions";
 import { clearSearchHistory } from "@/app/(app)/insights/actions";
+import { exportEverything } from "@/app/(app)/settings/actions";
+import { downloadXlsx } from "@/lib/download-xlsx";
+import { exportFileName } from "@/lib/export";
 import { ACTIVITY_DAYS } from "@/lib/insights";
 import { formatDate } from "@/lib/format";
 import type { Guide } from "@/lib/types";
@@ -31,6 +34,31 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <h2 className="border-b py-3 font-medium">{title}</h2>
       <div className="divide-y">{children}</div>
     </section>
+  );
+}
+
+function ExportEverything() {
+  const [pending, setPending] = useState(false);
+  return (
+    <Button
+      variant="outline"
+      disabled={pending}
+      onClick={async () => {
+        setPending(true);
+        try {
+          const res = await exportEverything();
+          if (!res.ok) return void toast.error(res.error);
+          await downloadXlsx(exportFileName("everything"), res.sheets);
+          toast.success("Exported", { description: res.sheets.map((s) => `${s.name}: ${s.rows.length - 1}`).join(" · ") });
+        } catch {
+          toast.error("Couldn’t create the Excel file. Please try again.");
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      {pending ? <Loader2 className="animate-spin" /> : <Download />} Export to Excel
+    </Button>
   );
 }
 
@@ -156,10 +184,8 @@ export function SettingsView({ deleted, indexed, searchesLogged }: { deleted: Gu
         </Card>
 
         <Card title="Your data">
-          <Row title="Export everything" description="All guides, analyses and templates as one Excel file.">
-            <Button variant="outline" onClick={() => toast("Export is mocked")}>
-              <Download /> Export to Excel
-            </Button>
+          <Row title="Export everything" description="Guides, analyses, SOPs, templates and version notes as one Excel file, one sheet each. Items in the bin aren’t included.">
+            <ExportEverything />
           </Row>
           <DeletedGuides guides={deleted} />
           <Row title="Backups" description="Supabase takes a daily backup of the database. The README explains how to restore it.">

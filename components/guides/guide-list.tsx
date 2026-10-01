@@ -13,6 +13,8 @@ import { Tag, VerifiedBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
+import { exportFileName, guidesSheet } from "@/lib/export";
+import { downloadXlsx } from "@/lib/download-xlsx";
 import { CATEGORIES, PRODUCTS, type Guide } from "@/lib/types";
 
 const ALL = "all";
@@ -80,8 +82,20 @@ export function GuideList({
         description="Every fix and how-to you’ve written, filterable by product, module and category."
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast("Export is mocked in the prototype", { description: `Would download ${rows.length} guides as Excel.` })}>
-              <Download /> Export
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={rows.length === 0}
+              onClick={async () => {
+                try {
+                  await downloadXlsx(exportFileName("guides"), [guidesSheet(rows)]);
+                  toast.success(`Exported ${rows.length} guide${rows.length === 1 ? "" : "s"}`, { description: "The file can be imported again later." });
+                } catch {
+                  toast.error("Couldn’t create the Excel file. Please try again.");
+                }
+              }}
+            >
+              <Download /> Export{rows.length !== guides.length ? ` ${rows.length}` : ""}
             </Button>
             <ButtonLink variant="outline" size="sm" href="/guides/import">
               <Upload /> Import
