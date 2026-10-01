@@ -4,7 +4,15 @@ A personal guidelines tool for an AutoCount support consultant: a searchable lib
 
 Everything runs on free tiers and open-source libraries: no paid services, and nothing to run on your PC. AI features are **off** by choice; nothing is sent to an AI service.
 
-> **Status: Phase 3 (search).** Login, guide library (save, edit, bin, attachments, Excel/CSV import) and search are live. The accounting analyst, reply generator and SOP builder show sample content until their phases.
+> **Status: Phase 4 (accounting analyst).** Login, guide library, search and the scenario calculator are live. The reply generator and SOP builder show sample content until Phase 6.
+
+## Accounting analyst (free, no AI)
+
+- 26 worked scenarios in `lib/scenarios/` (deposits, SST invoices, partial and foreign-currency payments, revaluation, credit notes, contra, stock, accruals, prepayments, depreciation, bad debts, impairment, payroll, bank items, withholding tax, cash rounding) plus **Build your own entry**.
+- All arithmetic is in sen (integers), and every entry is checked so total Dr equals total Cr, both in the browser and again on the server when saving.
+- AutoCount menu paths are always shown as **Needs verification**; tax points that depend on judgement are listed under “Needs verification” too.
+- Results can be saved to History, turned into a guide, printed / saved as PDF (browser print), or copied as a prompt to paste into your own Claude app (**Copy for Claude**, nothing is sent automatically).
+- **Expected results for approval:** `docs/accounting-scenarios.md` lists the entries every scenario produces with its example figures. The unit tests lock these figures; if a calculation changes, the tests fail until the document is deliberately regenerated with `npx vitest run -u`.
 
 ## Set up
 
@@ -57,7 +65,7 @@ npm run test:unit # unit tests only (Vitest)
 npm run build     # production build
 ```
 
-Browser tests run against a production build on port 3100. Signed-in tests need `E2E_EMAIL` and `E2E_PASSWORD` for a **dedicated test account** (read from `.env.local`); they sign in once per run and reuse the session. Tests that create, edit and delete guides (`e2e/guides.spec.ts`) also need `E2E_ALLOW_WRITES=1`; they only touch guides titled `[e2e] …` and remove them afterwards. Traces and screenshots are off because they would record what's typed, including the test password. CI (`.github/workflows/ci.yml`) runs `npm test` on every push.
+Browser tests run against a production build on port 3100. Signed-in tests need `E2E_EMAIL` and `E2E_PASSWORD` for a **dedicated test account** (read from `.env.local`); they sign in once per run and reuse the session. Tests that create, edit and delete guides (`e2e/guides.spec.ts`) also need `E2E_ALLOW_WRITES=1`; they only touch guides titled `[e2e] …` and remove them afterwards. Traces and screenshots are off because they would record what's typed, including the test password. To run only the signed-out tests, set `E2E_SIGNED_IN=0`. CI (`.github/workflows/ci.yml`) runs `npm test` on every push.
 
 ## Structure
 

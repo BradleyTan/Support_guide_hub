@@ -8,7 +8,7 @@ if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 // Tests run against a production build on its own port, so they never race the dev server's on-demand compiler.
 const PORT = 3100;
 const AUTH_FILE = "e2e/.auth/user.json";
-const signedIn = !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD;
+const signedIn = !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD && process.env.E2E_SIGNED_IN !== "0";
 
 export default defineConfig({
   testDir: "./e2e",

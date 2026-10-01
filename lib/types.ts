@@ -121,6 +121,8 @@ export interface Analysis {
   judgementNote?: string;
   sources: AnalysisSource[];
   chat: ChatMessage[];
+  /** Present when made with the scenario calculator: lets it reopen with the same inputs. */
+  calculator?: { scenarioId: string; inputs: Record<string, string | number> };
 }
 
 export interface OfficialResult {

@@ -4,7 +4,8 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { ConfidenceBadge, NeedsVerification } from "@/components/shared/badges";
 import { journalTotals } from "@/lib/guide-utils";
 import { formatAmount, formatDate } from "@/lib/format";
-import type { Analysis } from "@/lib/types";
+import type { AnalysisResult as Result } from "@/lib/analysis-schema";
+import type { Confidence } from "@/lib/types";
 
 /** The seven fixed sections every analysis must have, in order. */
 function Part({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
@@ -28,7 +29,7 @@ function Bullets({ items }: { items: string[] }) {
   );
 }
 
-export function AnalysisResult({ a }: { a: Analysis }) {
+export function AnalysisResult({ a }: { a: Result & { confidence: Confidence } }) {
   return (
     <div>
       <Part n={1} title="Scenario and assumptions">

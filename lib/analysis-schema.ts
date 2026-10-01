@@ -19,6 +19,8 @@ export const analysisResultSchema = z.object({
   needsVerification: z.array(z.string()),
   judgementNote: z.string().optional(),
   sources: z.array(z.object({ label: z.string(), kind: z.enum(["my-guide", "official", "general"]), ref: z.string() })),
+  /** Set when the result came from the scenario calculator, so it can be reopened with the same inputs. */
+  calculator: z.object({ scenarioId: z.string(), inputs: z.record(z.string(), z.union([z.string(), z.number()])) }).optional(),
 });
 
 export type AnalysisResult = z.infer<typeof analysisResultSchema>;

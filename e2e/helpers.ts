@@ -1,7 +1,8 @@
 import { expect, type Browser, type Page } from "@playwright/test";
 
 export const AUTH_FILE = "e2e/.auth/user.json";
-export const hasTestAccount = !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD;
+/** Set E2E_SIGNED_IN=0 to run only the signed-out tests (e.g. while test account details are being fixed). */
+export const hasTestAccount = !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD && process.env.E2E_SIGNED_IN !== "0";
 export const allowWrites = hasTestAccount && process.env.E2E_ALLOW_WRITES === "1";
 
 /**
