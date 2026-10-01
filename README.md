@@ -6,6 +6,20 @@ Everything runs on free tiers and open-source libraries: no paid services, and n
 
 > **Status: Phase 5 (insights).** Login, guide library, search, the scenario calculator and Insights are live. The reply generator and SOP builder show sample content until Phase 6.
 
+## Importing guides
+
+**Guide library → Import** accepts Excel/CSV (a heading row; you match the columns), and **PDF or .txt notes** written like this, several per file:
+
+```
+Issue: AutoCount Accounting - e-Invoice status Invalid, Buyer TIN is invalid
+Solution: Check the TIN with the Search TIN function. …
+```
+
+- `Issue:` starts each guide (at the start of a line). The part before the first ` - ` is the product if it names one (Accounting, Payroll, POS, Account Book); the rest is the title (over 200 characters: shortened, full text kept as the symptom).
+- `Solution:` becomes the fix steps: one per line, and `1. … 2. …` on one line is split too.
+- Notes with no product or no solution are flagged in the review and skipped, never guessed. Every guide is checked for duplicates and imported as unverified.
+- Files are read in the browser. PDFs are read with [unpdf](https://github.com/unjs/unpdf) (MIT); scanned PDFs (pictures of pages) have no text and are rejected with a message.
+
 ## Insights
 
 - **Insights** (sidebar; under **More** on a phone) shows the last 12 weeks: guides opened, searches, searches that found none of your guides, guides added and edited, as a weekly chart with a table view.
@@ -83,7 +97,7 @@ Browser tests run against a production build on port 3100. Signed-in tests need 
 | `app/(app)/` | One folder per screen; `actions.ts` files hold server actions |
 | `proxy.ts`, `lib/supabase/` | Session refresh and login redirect, Supabase clients, types |
 | `lib/data.ts` | Server-side reads (run as the signed-in user) |
-| `lib/embeddings.ts`, `lib/official-sites.ts`, `lib/import.ts` | Search vectors, official-site rules, Excel/CSV import logic |
+| `lib/embeddings.ts`, `lib/official-sites.ts`, `lib/import.ts`, `lib/import-notes.ts` | Search vectors, official-site rules, Excel/CSV import logic, PDF/.txt notes parser |
 | `components/` | Shell, shared inputs and states, one folder per feature |
 | `lib/mock/` | Sample data used by **Load sample data** and tests |
 | `tests/`, `e2e/` | Vitest unit tests, Playwright browser tests |

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CircleAlert, Download, FileSpreadsheet, Loader2, TriangleAlert, Upload } from "lucide-react";
+import { Check, CircleAlert, Download, FileSpreadsheet, FileText, Loader2, TriangleAlert, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/shared/page-header";
 import { importGuides } from "@/app/(app)/guides/actions";
 import { autoMapColumns, FIELD_LABEL, IMPORT_FIELDS, reviewRows, splitHeader, type Mapping, type ReviewedRow } from "@/lib/import";
+import { notesToSheet, parseNotes, pdfItemsToText } from "@/lib/import-notes";
 import { shortProduct } from "@/lib/guide-utils";
 import { PRODUCTS, type Product } from "@/lib/types";
 
@@ -22,6 +23,8 @@ const NO_DEFAULT = "none";
 
 interface Parsed {
   fileName: string;
+  /** "notes": a PDF or .txt of Issue: / Solution: notes, turned into one row per issue. */
+  kind: "sheet" | "notes";
   sheets: Record<string, unknown[][]>;
   sheet: string;
 }
@@ -30,11 +33,29 @@ const TEMPLATE =
   "Title,Product,Version,Module,Category,Symptom,Error message,Cause,Fix steps,Prevention,Tags\n" +
   '"Invoice prints blank on new PC",AutoCount Account Book,2.1,Printing,Printing & Reports,"Preview shows layout but no data",,"Custom template not copied","Export template from old PC; Import on new PC and set as default",,"printing, template"\n';
 
-function downloadTemplate() {
-  const url = URL.createObjectURL(new Blob([TEMPLATE], { type: "text/csv" }));
-  const a = Object.assign(document.createElement("a"), { href: url, download: "guides-import-template.csv" });
+const NOTES_EXAMPLE =
+  "Issue: AutoCount Accounting - e-Invoice status Invalid: Buyer TIN is invalid\r\n" +
+  "Solution: Check the TIN with the Search TIN function. For government buyers leave TIN and BRN blank, but fill in the debtor's tax entity in Debtor Maintenance.\r\n" +
+  "\r\n" +
+  "Issue: AutoCount Payroll - Payslip email not received\r\n" +
+  "Solution:\r\n" +
+  "1. Check the email settings\r\n" +
+  "2. Send a test email\r\n" +
+  "3. Send the payslips again\r\n";
+
+function download(content: string, type: string, name: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Text of a PDF with its line breaks, read in the browser. Empty for scanned PDFs (pictures of pages). */
+async function readPdfText(file: File) {
+  const { extractTextItems, getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
+  const { items } = await extractTextItems(pdf);
+  return pdfItemsToText(items);
 }
 
 export function ImportWizard({ existing }: { existing: { code: string; title: string }[] }) {
@@ -54,8 +75,10 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
 
   async function readFile(file: File) {
     setFileError(null);
-    if (!/\.(xlsx|xls|csv)$/i.test(file.name)) return setFileError(`${file.name} isn’t an Excel or CSV file. Save it as .xlsx or .csv and try again.`);
+    const notes = /\.(pdf|txt)$/i.test(file.name);
+    if (!notes && !/\.(xlsx|xls|csv)$/i.test(file.name)) return setFileError(`${file.name} can’t be imported. Use an Excel (.xlsx, .xls), CSV, PDF or text (.txt) file.`);
     if (file.size > MAX_FILE_MB * 1024 * 1024) return setFileError(`${file.name} is larger than ${MAX_FILE_MB} MB. Split it into smaller files.`);
+    if (notes) return readNotes(file);
     setReading(true);
     try {
       const XLSX = await import("xlsx");
@@ -68,7 +91,24 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
         setFileError(`${file.name} has no heading row. Add a first row with column names (e.g. Issue, Solution) and upload it again.`);
         return;
       }
-      choose({ fileName: file.name, sheets, sheet: first });
+      choose({ fileName: file.name, kind: "sheet", sheets, sheet: first });
+    } catch {
+      setFileError(`${file.name} couldn’t be read. If it’s password-protected or damaged, save a fresh copy and try again.`);
+    } finally {
+      setReading(false);
+    }
+  }
+
+  async function readNotes(file: File) {
+    const isPdf = /\.pdf$/i.test(file.name);
+    setReading(true);
+    try {
+      const text = isPdf ? await readPdfText(file) : await file.text();
+      if (isPdf && !text.trim())
+        return setFileError(`${file.name} has no text to read. It looks like a scanned PDF (pictures of pages). Use a PDF saved from Word, or a text file.`);
+      const entries = parseNotes(text);
+      if (!entries.length) return setFileError(`No “Issue:” found in ${file.name}. Start each guide with “Issue:” and put the fix after “Solution:”. Download the example to see the layout.`);
+      choose({ fileName: file.name, kind: "notes", sheets: { Notes: notesToSheet(entries) }, sheet: "Notes" });
     } catch {
       setFileError(`${file.name} couldn’t be read. If it’s password-protected or damaged, save a fresh copy and try again.`);
     } finally {
@@ -126,11 +166,16 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
     <>
       <PageHeader
         title="Import guides"
-        description="Bring in your existing Excel or CSV log. You match the columns once, check the rows, then import."
+        description="Bring in your existing Excel or CSV log, or your Issue / Solution notes as a PDF or text file. You check every guide before it’s imported."
         actions={
-          <Button variant="outline" size="sm" onClick={downloadTemplate}>
-            <Download /> Download template
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={() => download(TEMPLATE, "text/csv", "guides-import-template.csv")}>
+              <Download /> Excel template
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => download(NOTES_EXAMPLE, "text/plain", "guides-notes-example.txt")}>
+              <Download /> Notes example
+            </Button>
+          </>
         }
       />
 
@@ -166,15 +211,15 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
             className="flex cursor-pointer flex-col items-center rounded-lg border border-dashed bg-card px-6 py-10 text-center transition-colors hover:border-primary/60 hover:bg-accent/30"
           >
             {reading ? <Loader2 className="mb-2 size-6 animate-spin text-muted-foreground" /> : <Upload className="mb-2 size-6 text-muted-foreground" />}
-            <span className="font-medium">{reading ? "Reading the file…" : "Drop an Excel or CSV file, or select one"}</span>
+            <span className="font-medium">{reading ? "Reading the file…" : "Drop a file, or select one"}</span>
             <span className="mt-1 text-sm text-muted-foreground">
-              .xlsx, .xls or .csv · a heading row with column names · up to {MAX_ROWS.toLocaleString()} rows, {MAX_FILE_MB} MB
+              Excel or CSV with a heading row, or PDF / .txt notes · up to {MAX_ROWS.toLocaleString()} guides, {MAX_FILE_MB} MB
             </span>
             <input
               ref={fileInput}
               id="import-file"
               type="file"
-              accept=".xlsx,.xls,.csv"
+              accept=".xlsx,.xls,.csv,.pdf,.txt"
               className="sr-only"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -183,7 +228,9 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
               }}
             />
           </label>
-          <p className="text-xs text-muted-foreground">The file is read in your browser. Only the rows you choose to import are saved.</p>
+          <p className="text-xs text-muted-foreground">
+            The file is read in your browser. Only the guides you choose to import are saved. In a PDF or text file, start each guide with “Issue: AutoCount Accounting - …” and put the fix after “Solution:”.
+          </p>
           {fileError && (
             <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" /> {fileError}
@@ -191,11 +238,13 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
           )}
           {parsed && table && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 text-sm">
-              <FileSpreadsheet className="size-5 text-success" />
+              {parsed.kind === "notes" ? <FileText className="size-5 text-success" /> : <FileSpreadsheet className="size-5 text-success" />}
               <span className="min-w-0 flex-1">
                 <span className="font-medium">{parsed.fileName}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {table.rows.length.toLocaleString()} rows · {table.headers.length} columns
+                  {parsed.kind === "notes"
+                    ? `${table.rows.length.toLocaleString()} issue${table.rows.length === 1 ? "" : "s"} found`
+                    : `${table.rows.length.toLocaleString()} rows · ${table.headers.length} columns`}
                   {table.rows.length > MAX_ROWS && ` · only the first ${MAX_ROWS.toLocaleString()} rows will be imported`}
                 </span>
               </span>
@@ -223,7 +272,11 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
 
       {step === 1 && table && (
         <div className="max-w-3xl space-y-4">
-          <p className="text-sm text-muted-foreground">I matched the columns by their names. Change any that are wrong. Columns set to “Skip” aren’t imported, so client names and other private columns can be left out.</p>
+          <p className="text-sm text-muted-foreground">
+            {parsed?.kind === "notes"
+              ? "Each Issue line became a title and product, and each Solution became the fix steps. Change any that are wrong, or set a column to “Skip”."
+              : "I matched the columns by their names. Change any that are wrong. Columns set to “Skip” aren’t imported, so client names and other private columns can be left out."}
+          </p>
           <div className="overflow-hidden rounded-lg border bg-card">
             <Table>
               <TableHeader>
@@ -301,7 +354,7 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
             <Table>
               <TableHeader className="sticky top-0 bg-card">
                 <TableRow>
-                  <TableHead className="w-14">Row</TableHead>
+                  <TableHead className="w-14">{parsed?.kind === "notes" ? "Issue" : "Row"}</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead className="w-28">Product</TableHead>
                   <TableHead className="w-72">Check</TableHead>
@@ -310,7 +363,7 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
               <TableBody>
                 {review.map((r) => (
                   <TableRow key={r.rowNumber}>
-                    <TableCell className="text-muted-foreground">{r.rowNumber}</TableCell>
+                    <TableCell className="text-muted-foreground">{parsed?.kind === "notes" ? r.rowNumber - 1 : r.rowNumber}</TableCell>
                     <TableCell className={cn("whitespace-normal", !r.input.title && "text-muted-foreground italic")}>{r.input.title || "(empty)"}</TableCell>
                     <TableCell>{r.input.product ? shortProduct(r.input.product) : "—"}</TableCell>
                     <TableCell className="whitespace-normal">
@@ -368,7 +421,7 @@ export function ImportWizard({ existing }: { existing: { code: string; title: st
             {result.imported} guide{result.imported === 1 ? "" : "s"} imported
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {result.skipped > 0 && `${result.skipped} row${result.skipped === 1 ? "" : "s"} skipped. `}Imported guides are marked unverified so you can check them when you have time.
+            {result.skipped > 0 && `${result.skipped} ${parsed?.kind === "notes" ? "issue" : "row"}${result.skipped === 1 ? "" : "s"} skipped. `}Imported guides are marked unverified so you can check them when you have time.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <ButtonLink href="/guides?status=unverified">Review imported guides</ButtonLink>
