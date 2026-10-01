@@ -4,7 +4,14 @@ A personal guidelines tool for an AutoCount support consultant: a searchable lib
 
 Everything runs on free tiers and open-source libraries: no paid services, and nothing to run on your PC. AI features are **off** by choice; nothing is sent to an AI service.
 
-> **Status: Phase 5 (insights).** Login, guide library, search, the scenario calculator and Insights are live. The reply generator and SOP builder show sample content until Phase 6.
+> **Status: Phase 6 (writing tools).** Login, guide library, search, the scenario calculator, Insights, replies, SOPs, templates and version notes are live. Exports, hosting and deployment come in Phase 7.
+
+## Replies, SOPs, templates and version notes (no AI)
+
+- **Reply generator:** choose a guide or analysis, a reply template (or the standard reply), the client’s name and the channel (Zoho Desk email or WhatsApp). Placeholders such as `{contact}`, `{title}`, `{cause}`, `{steps}`, `{prevention}`, and for analyses `{entries}` and `{treatment}`, are filled in; a line whose placeholders have nothing to fill is left out. WhatsApp puts headings in *bold*. Edit the draft, then copy it. English only. AutoCount menu paths from analyses are never put in a reply, because they aren’t confirmed.
+- **Templates & snippets:** create, edit, delete and copy Reply, SQL and Checklist templates. “Used n×” counts copies and replies.
+- **SOP builder:** start from a guide (its steps, product, version and module), edit, reorder, add a screenshot from the guide under any step and list end checks. Saved as SOP-1, SOP-2 … (table `sops`). **Print / Save as PDF** opens a clean page for the browser’s Save as PDF; screenshot links last 10 minutes.
+- **Versions & releases:** your own notes (known issue, fix, note) per product and version, linked to guides; linked notes show on the guide page.
 
 ## Importing guides
 
@@ -69,7 +76,7 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
 - Edge Functions in `supabase/functions/` (`embed`, `refresh-official`).
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.
 - Security checks: run the scripts in `supabase/tests/` in the Supabase SQL editor. Each uses a transaction, rolls back, and reports "all checks passed".

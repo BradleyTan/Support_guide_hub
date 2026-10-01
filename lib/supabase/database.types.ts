@@ -254,6 +254,42 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["release_notes"]["Insert"]>;
         Relationships: [];
       };
+      sops: {
+        Row: {
+          id: string;
+          user_id: string;
+          code: string;
+          guide_id: string | null;
+          title: string;
+          version: string;
+          purpose: string;
+          scope: string;
+          steps: Json;
+          checks: string[];
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          code?: string;
+          guide_id?: string | null;
+          title: string;
+          version?: string;
+          purpose?: string;
+          scope?: string;
+          steps?: Json;
+          checks?: string[];
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["sops"]["Insert"]>;
+        Relationships: [
+          { foreignKeyName: "sops_guide_id_fkey"; columns: ["guide_id"]; isOneToOne: false; referencedRelation: "guides"; referencedColumns: ["id"] },
+        ];
+      };
       search_log: {
         Row: { id: number; user_id: string; query: string; normalized: string; guide_hits: number; created_at: string };
         Insert: { user_id?: string; query: string; guide_hits: number; created_at?: string };

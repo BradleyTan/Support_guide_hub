@@ -5,7 +5,7 @@ export const templates: Template[] = [
     id: "T-01",
     kind: "Reply",
     title: "Issue resolved – confirmation",
-    body: "Hi {contact},\n\nThe issue with {topic} has been resolved. Please log in again and let us know if everything looks correct.\n\nThank you.",
+    body: "Hi {contact},\n\nThe issue “{title}” has been resolved. Please log in again and let us know if everything looks correct.\n\nThank you.",
     tags: ["closing", "email"],
     uses: 42,
   },

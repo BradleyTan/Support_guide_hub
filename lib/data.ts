@@ -1,7 +1,8 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { Json, Tables } from "@/lib/supabase/database.types";
+import { parseSteps as parseSopSteps, type Sop, type SopImage } from "@/lib/sop";
 import { analysisResultSchema } from "@/lib/analysis-schema";
 import type { Analysis, Attachment, Category, Confidence, Guide, Product, ReleaseNote, Template, TemplateKind } from "@/lib/types";
 import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
@@ -57,12 +58,18 @@ export const getGuide = cache(async (code: string): Promise<Guide | null> => {
     supabase.from("guide_revisions").select("created_at, summary").eq("guide_id", r.id).order("created_at"),
     supabase.from("pins").select("id, title, url, site").eq("guide_id", r.id).order("created_at"),
   ]);
+  const { data: notes } = await supabase.from("release_note_guides").select("release_notes(id, product, version, type, title, deleted_at)").eq("guide_id", r.id);
   return {
     ...rowToGuide(asRow(r), {
       attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
       revisions: (rev.data ?? []).map((v) => ({ at: v.created_at, summary: v.summary })),
     }),
     pins: pins.data ?? [],
+    versionNotes: (notes ?? []).flatMap((n) =>
+      n.release_notes && !n.release_notes.deleted_at
+        ? [{ id: n.release_notes.id, product: n.release_notes.product as Product, version: n.release_notes.version, type: n.release_notes.type as ReleaseNote["type"], title: n.release_notes.title }]
+        : [],
+    ),
   };
 });
 
@@ -173,4 +180,54 @@ export const getInsights = cache(async (): Promise<Insights> => {
     notOpened: notOpenedRecently(guides, new Set(opened.map((o) => o.guide.dbId!))),
     health: libraryHealth(guides),
   };
+});
+
+const SOP_COLUMNS = "id, code, title, version, purpose, scope, steps, checks, updated_at, guides(code)";
+
+type SopRow = { id: string; code: string; title: string; version: string; purpose: string; scope: string; steps: Json; checks: string[]; updated_at: string; guides: { code: string } | null };
+
+function rowToSop(r: SopRow): Sop {
+  return {
+    id: r.code,
+    dbId: r.id,
+    guideCode: r.guides?.code ?? null,
+    title: r.title,
+    version: r.version,
+    purpose: r.purpose,
+    scope: r.scope,
+    steps: parseSopSteps(r.steps),
+    checks: r.checks,
+    updatedAt: r.updated_at,
+  };
+}
+
+export const getSops = cache(async (): Promise<Sop[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("sops").select(SOP_COLUMNS).is("deleted_at", null).order("updated_at", { ascending: false });
+  if (error) throw new Error(`Couldn’t load SOPs: ${error.message}`);
+  return (data as unknown as SopRow[]).map(rowToSop);
+});
+
+/** Screenshots attached to a guide, with private links valid for 10 minutes (for the SOP editor and print view). */
+export async function getGuideImages(guideCode: string | null): Promise<SopImage[]> {
+  if (!guideCode) return [];
+  const supabase = await createClient();
+  const { data: g } = await supabase.from("guides").select("id").eq("code", guideCode).maybeSingle();
+  if (!g) return [];
+  const { data: atts } = await supabase.from("guide_attachments").select("id, name, storage_path").eq("guide_id", g.id).eq("kind", "image").order("created_at");
+  if (!atts?.length) return [];
+  const { data: signed } = await supabase.storage.from("attachments").createSignedUrls(
+    atts.map((a) => a.storage_path),
+    600,
+  );
+  return atts.map((a, i) => ({ id: a.id, name: a.name, url: signed?.[i]?.signedUrl ?? null }));
+}
+
+export const getSop = cache(async (code: string): Promise<{ sop: Sop; images: SopImage[] } | null> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("sops").select(SOP_COLUMNS).eq("code", code).is("deleted_at", null).maybeSingle();
+  if (error) throw new Error(`Couldn’t load the SOP: ${error.message}`);
+  if (!data) return null;
+  const sop = rowToSop(data as unknown as SopRow);
+  return { sop, images: await getGuideImages(sop.guideCode) };
 });

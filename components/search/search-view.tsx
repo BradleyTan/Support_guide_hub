@@ -276,8 +276,8 @@ export function SearchView({
           .
         </EmptyState>
       ) : (
-        <div className="grid gap-8 xl:grid-cols-2">
-          <section aria-labelledby="sec-mine" aria-busy={loadingMine}>
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+          <section aria-labelledby="sec-mine" aria-busy={loadingMine} className="min-w-0">
             <SectionTitle
               id="sec-mine"
               icon={BookText}
@@ -333,7 +333,7 @@ export function SearchView({
             )}
           </section>
 
-          <section aria-labelledby="sec-official" aria-busy={loadingOfficial}>
+          <section aria-labelledby="sec-official" aria-busy={loadingOfficial} className="min-w-0">
             <SectionTitle
               id="sec-official"
               icon={Globe}

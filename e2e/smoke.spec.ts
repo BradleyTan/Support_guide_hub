@@ -25,8 +25,12 @@ function collectErrors(page: Page) {
 }
 
 async function noSideScroll(page: Page) {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow, "page scrolls horizontally").toBeLessThanOrEqual(1);
+  // Compared with the screen width the page was given (clientWidth), not window.innerWidth: on a phone,
+  // a too-wide page makes the browser zoom out, which widens innerWidth too and hid the problem.
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow, "page is wider than the screen").toBeLessThanOrEqual(1);
+  const zoomedOut = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth);
+  expect(zoomedOut, "phone browser zoomed out because the page is too wide").toBeLessThanOrEqual(1);
 }
 
 test.describe("signed out", () => {

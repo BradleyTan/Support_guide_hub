@@ -57,6 +57,8 @@ export interface Guide {
   uses: number; // times opened or used in a reply
   attachments: Attachment[];
   pins?: Pin[];
+  /** Your version notes linked to this guide (Versions & releases). */
+  versionNotes?: { id: string; product: Product; version: string; type: ReleaseNote["type"]; title: string }[];
   createdAt: string;
   updatedAt: string;
   revisions: Revision[];
