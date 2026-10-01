@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Calculator, FilePlus2, Moon, Sun, Upload } from "lucide-react";
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -55,6 +56,8 @@ export function CommandPalette({ open, onOpenChange, guides }: { open: boolean; 
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} title="Command palette" description="Jump to a screen, guide or action">
+      {/* CommandDialog is only the dialog; cmdk's input and list need the Command root around them. */}
+      <Command>
       <CommandInput placeholder="Type a screen, guide number or action…" />
       <CommandList>
         <CommandEmpty>No match. Try a guide number like G-1051.</CommandEmpty>
@@ -67,7 +70,7 @@ export function CommandPalette({ open, onOpenChange, guides }: { open: boolean; 
             <Calculator /> Analyse a scenario
           </CommandItem>
           <CommandItem onSelect={() => go("/guides/import")}>
-            <Upload /> Import guides from Excel / CSV
+            <Upload /> Import guides (Excel, CSV, PDF, text)
           </CommandItem>
           <CommandItem
             onSelect={() => {
@@ -97,6 +100,7 @@ export function CommandPalette({ open, onOpenChange, guides }: { open: boolean; 
           ))}
         </CommandGroup>
       </CommandList>
+      </Command>
     </CommandDialog>
   );
 }

@@ -105,6 +105,22 @@ test.describe("signed in", () => {
     });
   }
 
+  test("the command palette opens, filters and jumps to a screen", async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto("/");
+    await page.getByRole("button", { name: /Jump to a guide/ }).click();
+    const input = page.getByPlaceholder("Type a screen, guide number or action…");
+    await expect(input).toBeVisible();
+    await input.fill("insights");
+    await page.getByRole("option", { name: "Insights" }).click();
+    await expect(page).toHaveURL(/\/insights$/);
+    await page.keyboard.press("Control+k");
+    await expect(input).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(input).toBeHidden();
+    expect(errors, errors.join("\n")).toEqual([]);
+  });
+
   test("unknown guide shows the not-found page", async ({ page }) => {
     await page.goto("/guides/G-99999");
     await expect(page.getByText("That page or guide doesn’t exist")).toBeVisible();
