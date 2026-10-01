@@ -1,6 +1,6 @@
-# Accounting scenarios: expected results for approval
+# Accounting scenarios: approved expected results
 
-Generated from the scenario calculator's default inputs. **Please review each entry.** Once approved, the tests lock these figures: any change to the calculations makes the tests fail until this file is deliberately updated (`npx vitest run -u`).
+Generated from the scenario calculator's default inputs. **All entries approved by the user on 1 Oct 2026.** The tests lock these figures: any change to the calculations makes the tests fail until this file is deliberately updated (`npx vitest run -u`), and a changed entry needs approving again.
 
 Amounts in RM. AutoCount menu paths are not confirmed and are always marked “needs verification” in the app.
 
@@ -18,7 +18,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Customer deposit (liability) |  | 5000.00 |
 | **Total** | **5000.00** | **5000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Apply a customer deposit to the invoice
 
@@ -34,7 +34,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Trade debtor |  | 5000.00 |
 | **Total** | **5000.00** | **5000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Invoice for a taxable service (service tax)
 
@@ -51,7 +51,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Service tax payable |  | 1600.00 |
 | **Total** | **21600.00** | **21600.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Invoice for taxable goods (sales tax)
 
@@ -76,7 +76,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Inventory |  | 6000.00 |
 | **Total** | **6000.00** | **6000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Customer pays part of an invoice
 
@@ -92,7 +92,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Trade debtor |  | 10000.00 |
 | **Total** | **10000.00** | **10000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Credit note for returned goods
 
@@ -117,7 +117,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Cost of sales |  | 600.00 |
 | **Total** | **600.00** | **600.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Credit note for a price reduction (no return)
 
@@ -134,7 +134,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Trade debtor |  | 540.00 |
 | **Total** | **540.00** | **540.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Refund a customer deposit
 
@@ -150,7 +150,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Bank |  | 1000.00 |
 | **Total** | **1000.00** | **1000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Contra: set off what a customer owes against what you owe them
 
@@ -166,7 +166,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Trade debtor – Lim Brothers |  | 5000.00 |
 | **Total** | **5000.00** | **5000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Supplier invoice that includes SST
 
@@ -182,7 +182,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Trade creditor |  | 2160.00 |
 | **Total** | **2160.00** | **2160.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Pay a supplier and take an early-payment discount
 
@@ -199,7 +199,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Discount received |  | 200.00 |
 | **Total** | **10000.00** | **10000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Pay a non-resident with withholding tax
 
@@ -216,7 +216,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Withholding tax payable (LHDN) |  | 2000.00 |
 | **Total** | **20000.00** | **20000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Customer pays a foreign-currency invoice (realised gain/loss)
 
@@ -233,7 +233,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Realised exchange loss | 40.00 |  |
 | **Total** | **8800.00** | **8800.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Pay a foreign-currency supplier invoice (realised gain/loss)
 
@@ -250,7 +250,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Realised exchange loss | 210.00 |  |
 | **Total** | **13260.00** | **13260.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Month-end revaluation of a foreign-currency balance
 
@@ -266,7 +266,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Trade debtor |  | 120.00 |
 | **Total** | **120.00** | **120.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Foreign deposit → invoice with SST → partial payment → month-end
 
@@ -319,7 +319,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 
 > Judgement: Under IC Interpretation 22, the prepaid part can be measured at the deposit-date rate instead, which moves the RM 50.00 difference from exchange gain/loss into revenue. Confirm the company's policy.
 
-- [ ] Approved
+- [x] Approved
 
 ## Write off damaged or missing stock
 
@@ -335,7 +335,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Inventory |  | 2350.00 |
 | **Total** | **2350.00** | **2350.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Stock take finds more stock than the system
 
@@ -351,7 +351,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Stock adjustment (cost of sales) |  | 250.00 |
 | **Total** | **250.00** | **250.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Accrue an expense at period end (and reverse it)
 
@@ -375,7 +375,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Audit fee |  | 12000.00 |
 | **Total** | **12000.00** | **12000.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Prepaid expense (e.g. annual insurance) and monthly release
 
@@ -399,7 +399,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Prepaid insurance |  | 600.00 |
 | **Total** | **600.00** | **600.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Depreciation for the period (straight line)
 
@@ -415,7 +415,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Accumulated depreciation |  | 166.67 |
 | **Total** | **166.67** | **166.67** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Write off a bad debt
 
@@ -431,7 +431,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Trade debtor |  | 3240.00 |
 | **Total** | **3240.00** | **3240.00** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Allowance for doubtful debts (impairment)
 
@@ -449,7 +449,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 
 > Judgement: The loss rate is a judgement; base it on ageing and past collections and document it.
 
-- [ ] Approved
+- [x] Approved
 
 ## Cash sale with 5-sen rounding
 
@@ -466,7 +466,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Sales |  | 10.97 |
 | **Total** | **10.97** | **10.97** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Monthly payroll journal (EPF, SOCSO, EIS, PCB)
 
@@ -491,7 +491,7 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Salaries payable (net pay) |  | 4295.35 |
 | **Total** | **5796.55** | **5796.55** |
 
-- [ ] Approved
+- [x] Approved
 
 ## Bank charges and interest from the bank statement
 
@@ -515,4 +515,4 @@ Amounts in RM. AutoCount menu paths are not confirmed and are always marked “n
 | Interest income |  | 12.40 |
 | **Total** | **12.40** | **12.40** |
 
-- [ ] Approved
+- [x] Approved

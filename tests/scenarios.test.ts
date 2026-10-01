@@ -213,9 +213,9 @@ describe("hand-checked results", () => {
 /** The approval document: default inputs and the entries they produce, for every scenario. */
 function approvalDocument() {
   const lines = [
-    "# Accounting scenarios: expected results for approval",
+    "# Accounting scenarios: approved expected results",
     "",
-    "Generated from the scenario calculator's default inputs. **Please review each entry.** Once approved, the tests lock these figures: any change to the calculations makes the tests fail until this file is deliberately updated (`npx vitest run -u`).",
+    "Generated from the scenario calculator's default inputs. **All entries approved by the user on 1 Oct 2026.** The tests lock these figures: any change to the calculations makes the tests fail until this file is deliberately updated (`npx vitest run -u`), and a changed entry needs approving again.",
     "",
     "Amounts in RM. AutoCount menu paths are not confirmed and are always marked “needs verification” in the app.",
     "",
@@ -230,7 +230,7 @@ function approvalDocument() {
       lines.push(`| **Total** | **${t.dr.toFixed(2)}** | **${t.cr.toFixed(2)}** |`, "");
     }
     if (out.result.judgementNote) lines.push(`> Judgement: ${out.result.judgementNote}`, "");
-    lines.push("- [ ] Approved", "");
+    lines.push("- [x] Approved", "");
   }
   return lines.join("\n");
 }

@@ -34,6 +34,7 @@ export default defineConfig({
     command: `npm run build && npx next start --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
+    env: { NEXT_DIST_DIR: ".next-test" },
     timeout: 300_000,
   },
 });

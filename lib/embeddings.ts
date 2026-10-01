@@ -7,6 +7,13 @@ type Client = SupabaseClient<Database>;
 const DIMENSIONS = 384;
 const BATCH = 32;
 
+/**
+ * Minimum cosine similarity for a "similar meaning" match. Measured on the 636 indexed help-centre articles
+ * (1 Oct 2026): unrelated articles already score 0.72–0.86 against each other (median 0.80), nonsense queries
+ * reach up to 0.84, while real support questions found the right article at 0.875–0.92.
+ */
+export const MIN_MEANING_SIMILARITY = 0.86;
+
 /** Vectors for up to 64 texts from the `embed` Edge Function (Supabase's gte-small), called as the signed-in user. */
 export async function embedTexts(supabase: Client, texts: string[]): Promise<number[][]> {
   const { data, error } = await supabase.functions.invoke<{ embeddings: number[][] }>("embed", { body: { texts } });

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { after } from "next/server";
-import { backfillEmbeddings, embedQuery } from "@/lib/embeddings";
+import { MIN_MEANING_SIMILARITY, backfillEmbeddings, embedQuery } from "@/lib/embeddings";
 import { isAllowedUrl, siteLabel, type OfficialHit } from "@/lib/official-sites";
 import { rowToGuide } from "@/lib/data";
 import { PRODUCTS, type Guide } from "@/lib/types";
@@ -49,6 +49,7 @@ export async function searchMyGuides(
     p_version: f.data.version || null,
     p_tag: f.data.tag?.toLowerCase() || null,
     p_updated_after: f.data.updatedWithinDays ? new Date(Date.now() - f.data.updatedWithinDays * 86_400_000).toISOString() : null,
+    p_min_similarity: MIN_MEANING_SIMILARITY,
     p_limit: 20,
   });
   if (error) return { ok: false, error: "Search didn’t finish. Please try again." };
@@ -76,7 +77,7 @@ export async function searchOfficialSources(query: string): Promise<OfficialResu
   const supabase = await createClient();
   const embedding = await embedQuery(supabase, q.data);
   const [{ data, error }, { count }] = await Promise.all([
-    supabase.rpc("search_official_pages", { p_query: q.data, p_embedding: embedding, p_limit: 10 }),
+    supabase.rpc("search_official_pages", { p_query: q.data, p_embedding: embedding, p_min_similarity: MIN_MEANING_SIMILARITY, p_limit: 10 }),
     supabase.from("official_pages").select("url", { count: "exact", head: true }),
   ]);
   if (error) return { status: "error", reason: "Official search didn’t finish. Please try again." };
