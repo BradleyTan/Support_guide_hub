@@ -4,7 +4,7 @@ A personal guidelines tool for an AutoCount support consultant: a searchable lib
 
 Everything runs on free tiers and open-source libraries: no paid services, and nothing to run on your PC. AI features are **off** by choice; nothing is sent to an AI service.
 
-> **Status: Phase 6 (writing tools).** Login, guide library, search, the scenario calculator, Insights, replies, SOPs, templates and version notes are live. Exports, hosting and deployment come in Phase 7.
+> **Status: Phase 7 (go-live).** All features are built. Hosting: Netlify free plan; follow [docs/GO-LIVE.md](docs/GO-LIVE.md) to deploy.
 
 ## Replies, SOPs, templates and version notes (no AI)
 
@@ -76,15 +76,20 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
-- Edge Functions in `supabase/functions/` (`embed`, `refresh-official`).
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`).
+- **Bin:** deleted items stay restorable for 30 days; every night at 03:45 Malaysia time the `purge-bin` job removes older ones for good (guides together with their files). The function only accepts calls carrying a secret kept in the database Vault, which only the scheduled job sends.
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.
 - Security checks: run the scripts in `supabase/tests/` in the Supabase SQL editor. Each uses a transaction, rolls back, and reports "all checks passed".
 - Types: `lib/supabase/database.types.ts` follows the schema; update it after each migration.
 
 ### Backups
 
-Free Supabase projects get daily backups kept for a limited time, and free projects pause after about a week without use (resume them from the dashboard). For your own copy, **Settings → Export everything** (coming in Phase 7) downloads all guides to Excel. For a full database dump: `npx supabase db dump --db-url "<connection string>" -f backup.sql`, using the connection string from Supabase → Project settings → Database.
+Free Supabase projects get daily backups kept for a limited time, and free projects pause after about a week without use (resume them from the dashboard). For your own copy, **Settings → Export everything** downloads guides, analyses, SOPs, templates and version notes as one Excel file (the Guides sheet can be imported again). The guide library’s **Export** button saves the guides currently shown. For a full database dump: `npx supabase db dump --db-url "<connection string>" -f backup.sql`, using the connection string from Supabase → Project settings → Database.
+
+## Hosting
+
+Netlify free plan (work use allowed; 300 credits a month, hard cap, never charged). `netlify.toml` sets the build; Netlify adds its Next.js adapter automatically. The two public Supabase values go in Netlify’s environment variables, and the live address must be added to Supabase → Authentication → URL Configuration. Step by step: [docs/GO-LIVE.md](docs/GO-LIVE.md).
 
 ## Checks
 

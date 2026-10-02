@@ -1,0 +1,9 @@
+# Netlify (free plan). Netlify detects Next.js and adds its adapter automatically, so no plugin is listed here.
+# Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY under Site configuration → Environment variables.
+# Each production deploy uses 15 of the free plan's 300 monthly credits, so only the main branch deploys to production.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "24"
