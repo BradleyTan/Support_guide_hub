@@ -1,4 +1,5 @@
 import { expect, type Browser, type Page } from "@playwright/test";
+import { waitForApp } from "./fixtures";
 
 export const AUTH_FILE = "e2e/.auth/user.json";
 /** E2E_BASE_URL runs the tests against another address (e.g. the live site) instead of a local build. */
@@ -16,7 +17,7 @@ export const allowWrites = hasTestAccount && process.env.E2E_ALLOW_WRITES === "1
  */
 export async function signInFresh(page: Page) {
   await page.goto("/login");
-  await page.waitForLoadState("networkidle");
+  await waitForApp(page);
   await page.getByLabel("Email").fill(process.env.E2E_EMAIL!);
   await page.getByLabel("Password").fill(process.env.E2E_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).last().click();

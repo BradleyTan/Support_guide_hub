@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { createClient } from "@supabase/supabase-js";
 import { allowWrites, hasTestAccount } from "./helpers";
 
@@ -107,7 +108,7 @@ test.describe("saving (writes data)", () => {
     await page.getByLabel("Title").fill(`SOP ${RUN}`);
     await page.getByLabel("Step 1", { exact: true }).fill("Open Tools > Options");
     await page.getByRole("button", { name: "Add check" }).click();
-    await page.getByLabel("Check 1").fill("Invoice prints with all lines");
+    await page.getByLabel("Check 1", { exact: true }).fill("Invoice prints with all lines");
     await page.getByRole("button", { name: "Save SOP" }).first().click();
     await expect(page).toHaveURL(/\/sop\/SOP-\d+$/);
 

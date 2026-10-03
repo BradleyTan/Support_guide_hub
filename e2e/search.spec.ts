@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { hasTestAccount } from "./helpers";
 
 /** Read-only search checks (signed in via auth.setup.ts). They don't change any data. */

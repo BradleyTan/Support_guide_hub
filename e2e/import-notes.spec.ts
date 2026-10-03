@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { hasTestAccount } from "./helpers";
 
 /** Importing Issue / Solution notes from .txt and PDF. Read-only: stops at the review step, nothing is imported. */
