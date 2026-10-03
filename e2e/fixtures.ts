@@ -10,14 +10,14 @@ export async function waitForApp(page: Page) {
 
 /** Playwright's test, with page.goto() waiting for the app to be ready. Specs import test/expect from here. */
 export const test = base.extend({
-  page: async ({ page }, use) => {
+  page: async ({ page }, provide) => {
     const goto = page.goto.bind(page);
     page.goto = async (url, options) => {
       const response = await goto(url, options);
       await waitForApp(page);
       return response;
     };
-    await use(page);
+    await provide(page);
   },
 });
 

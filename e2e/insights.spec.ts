@@ -45,8 +45,10 @@ test.describe("search gaps (writes data)", () => {
   test.skip(({ isMobile }) => isMobile, "write tests run once, on desktop");
   test.skip(!allowWrites, "Set E2E_ALLOW_WRITES=1 to run tests that save data");
 
-  // Nonsense words only: "[e2e]" would match the other write tests' temporary [e2e] guides.
-  const query = `zqxjv wqpfk ${Date.now()}`;
+  // Random letters only: "[e2e]" or a timestamp would match the other write tests' temporary guides,
+  // whose titles carry "[e2e]" and a timestamp a few milliseconds apart ("similar spelling").
+  const letters = (n: number) => Array.from({ length: n }, () => "bcdfghjkmnpqrstvwxz"[Math.floor(Math.random() * 19)]).join("");
+  const query = `zqxjv wqpfk ${letters(10)}`;
 
   test.afterAll(async () => {
     if (!allowWrites) return;
