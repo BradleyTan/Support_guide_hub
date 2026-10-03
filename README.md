@@ -75,7 +75,7 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
 - Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`).
 - **Bin:** deleted items stay restorable for 30 days; every night at 03:45 Malaysia time the `purge-bin` job removes older ones for good (guides together with their files). The function only accepts calls carrying a secret kept in the database Vault, which only the scheduled job sends.
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.

@@ -1,7 +1,7 @@
 // Nightly bin clean-up: permanently removes items that were deleted (moved to the bin) more than 30 days ago.
 //   guides  → their files in the private "attachments" bucket first, then the rows (attachments, revisions,
-//             pins, open events and version-note links go with them; SOPs built from them are kept, unlinked)
-//   sops, analyses (with their messages), templates, release_notes → the rows
+//             pins and open events go with them; SOPs built from them are kept, unlinked)
+//   sops, analyses (with their messages), templates → the rows
 // Called only by pg_cron, which sends a secret kept in the database Vault (x-purge-secret); other callers get 401.
 // It takes no other input and only ever removes what has been in the bin for 30+ days. Storage files can't be
 // deleted from SQL, which is why this runs as a function with the service role.
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       removed.guides = count ?? 0;
     }
 
-    for (const table of ["sops", "analyses", "templates", "release_notes"] as const) {
+    for (const table of ["sops", "analyses", "templates"] as const) {
       const { error, count } = await db.from(table).delete({ count: "exact" }).lt("deleted_at", cutoff);
       if (error) throw error;
       removed[table] = count ?? 0;

@@ -209,51 +209,6 @@ export type Database = {
           { foreignKeyName: "pins_guide_id_fkey"; columns: ["guide_id"]; isOneToOne: false; referencedRelation: "guides"; referencedColumns: ["id"] },
         ];
       };
-      release_note_guides: {
-        Row: {
-          guide_id: string;
-          release_note_id: string;
-          user_id: string;
-        };
-        Insert: {
-          guide_id: string;
-          release_note_id: string;
-          user_id?: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["release_note_guides"]["Insert"]>;
-        Relationships: [
-          { foreignKeyName: "release_note_guides_guide_id_fkey"; columns: ["guide_id"]; isOneToOne: false; referencedRelation: "guides"; referencedColumns: ["id"] },
-          { foreignKeyName: "release_note_guides_release_note_id_fkey"; columns: ["release_note_id"]; isOneToOne: false; referencedRelation: "release_notes"; referencedColumns: ["id"] },
-        ];
-      };
-      release_notes: {
-        Row: {
-          created_at: string;
-          deleted_at: string | null;
-          detail: string;
-          id: string;
-          product: string;
-          title: string;
-          type: string;
-          updated_at: string;
-          user_id: string;
-          version: string;
-        };
-        Insert: {
-          created_at?: string;
-          deleted_at?: string | null;
-          detail?: string;
-          id?: string;
-          product: string;
-          title: string;
-          type: string;
-          updated_at?: string;
-          user_id?: string;
-          version: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["release_notes"]["Insert"]>;
-        Relationships: [];
-      };
       sops: {
         Row: {
           id: string;
