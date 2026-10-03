@@ -45,13 +45,14 @@ test.describe("search gaps (writes data)", () => {
   test.skip(({ isMobile }) => isMobile, "write tests run once, on desktop");
   test.skip(!allowWrites, "Set E2E_ALLOW_WRITES=1 to run tests that save data");
 
-  const query = `[e2e] zqxjv ${Date.now()}`;
+  // Nonsense words only: "[e2e]" would match the other write tests' temporary [e2e] guides.
+  const query = `zqxjv wqpfk ${Date.now()}`;
 
   test.afterAll(async () => {
     if (!allowWrites) return;
     const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
     await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
-    await sb.from("search_log").delete().like("query", "[e2e]%");
+    await sb.from("search_log").delete().eq("query", query);
     await sb.auth.signOut({ scope: "local" });
   });
 

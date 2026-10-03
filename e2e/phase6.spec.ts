@@ -93,7 +93,8 @@ test.describe("saving (writes data)", () => {
     await expect(page.getByLabel("Reply draft")).toHaveValue(/^Dear Encik Ali,[\s\S]*Regards, Support$/);
 
     await page.goto("/templates");
-    await page.getByRole("button", { name: new RegExp(`${RUN} reply`) }).click();
+    // Plain-text match: "[e2e]" has a special meaning in a regular expression.
+    await page.getByRole("button", { name: `${RUN} reply` }).click();
     await page.getByRole("button", { name: "Delete template" }).click();
     await page.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(page.getByText(`Deleted “${RUN} reply”`)).toBeVisible();
