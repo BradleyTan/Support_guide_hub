@@ -129,8 +129,9 @@ test.describe("saving (writes data)", () => {
     await page.getByRole("button", { name: /^Add (a )?note$/ }).first().click();
     await page.getByLabel("Product").click();
     await page.getByRole("option", { name: "Accounting" }).click();
-    await page.getByLabel("Version").fill("9.9");
-    await page.getByLabel("Title").fill(`${RUN} note`);
+    // Exact labels: the dialog itself is named "Add version note".
+    await page.getByLabel("Version", { exact: true }).fill("9.9");
+    await page.getByLabel("Title", { exact: true }).fill(`${RUN} note`);
     const firstGuide = page.getByRole("dialog").getByRole("checkbox").first();
     test.skip(!(await firstGuide.isVisible()), "the test account has no guides");
     await firstGuide.check();
