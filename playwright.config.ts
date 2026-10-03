@@ -17,6 +17,9 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
   fullyParallel: false,
+  // Write tests create, change and delete shared test data (e.g. an [e2e] guide that the SOP test may start from),
+  // so with E2E_ALLOW_WRITES=1 the files run one after another instead of side by side.
+  workers: process.env.E2E_ALLOW_WRITES === "1" ? 1 : undefined,
   reporter: [["list"]],
   // No traces: they record typed text, which would include the test account password.
   use: { baseURL, trace: "off", screenshot: "off" },
