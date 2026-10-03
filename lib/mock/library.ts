@@ -1,4 +1,4 @@
-import type { ReleaseNote, Template } from "@/lib/types";
+import type { Template } from "@/lib/types";
 
 export const templates: Template[] = [
   {
@@ -32,35 +32,5 @@ export const templates: Template[] = [
     body: "- Full backup of every account book\n- Note custom report templates\n- Check Windows and SQL Server versions\n- Close all workstations\n- Test open, print and post after upgrade",
     tags: ["upgrade", "backup"],
     uses: 14,
-  },
-];
-
-export const releaseNotes: ReleaseNote[] = [
-  {
-    id: "R-11",
-    product: "AutoCount Accounting",
-    version: "2.2",
-    type: "Known issue",
-    title: "e-Invoice rejects buyer when TIN and BRN mismatch",
-    detail: "Seen at two sites. A customer data issue rather than software. Keep the TIN checklist handy.",
-    guideIds: ["G-1046"],
-  },
-  {
-    id: "R-10",
-    product: "AutoCount POS",
-    version: "2.2",
-    type: "Note",
-    title: "Outlet sync credentials after router change",
-    detail: "Sync stops with 401 after network changes at the outlet.",
-    guideIds: ["G-1048"],
-  },
-  {
-    id: "R-09",
-    product: "AutoCount Accounting",
-    version: "2.1",
-    type: "Fix",
-    title: "Costing recalculation after backdated GRN",
-    detail: "Recalculate stock costing after backdated entries.",
-    guideIds: ["G-1045"],
   },
 ];

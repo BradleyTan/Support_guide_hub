@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { analysisToRow, guideToRow, remapGuideRefs, releaseNoteToRow, templateToRow } from "@/lib/seed";
+import { analysisToRow, guideToRow, remapGuideRefs, templateToRow } from "@/lib/seed";
 import { analysisResultSchema } from "@/lib/analysis-schema";
 import { guides } from "@/lib/mock/guides";
 import { analyses } from "@/lib/mock/analyses";
-import { releaseNotes, templates } from "@/lib/mock/library";
+import { templates } from "@/lib/mock/library";
 
 describe("seed mapping", () => {
   it("maps every sample guide to a row the database accepts", () => {
@@ -35,9 +35,8 @@ describe("seed mapping", () => {
     }
   });
 
-  it("maps templates and release notes with allowed kinds", () => {
+  it("maps templates with allowed kinds", () => {
     for (const t of templates) expect(["Reply", "SQL", "Checklist"]).toContain(templateToRow(t).kind);
-    for (const r of releaseNotes) expect(["Known issue", "Fix", "Note"]).toContain(releaseNoteToRow(r).type);
   });
 
   it("sample guide titles are unique (the seed matches rows back by title)", () => {

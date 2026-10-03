@@ -141,7 +141,7 @@ function LoadSampleButton() {
         start(async () => {
           const res = await loadSampleData();
           if (res.ok) {
-            toast.success(`Added ${res.guides} sample guides`, { description: "Plus sample analyses, templates and version notes." });
+            toast.success(`Added ${res.guides} sample guides`, { description: "Plus sample analyses and templates." });
             router.refresh();
           } else toast.error(res.error);
         })

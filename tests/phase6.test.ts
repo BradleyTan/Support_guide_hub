@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_REPLY_TEMPLATE, PLACEHOLDERS, analysisValues, entriesText, fillTemplate, formatForChannel, guideValues, templateInputSchema, unfilledPlaceholders } from "@/lib/templates";
 import { move, parseSteps, sopFromGuide, sopInputSchema } from "@/lib/sop";
-import { compareVersionsDesc, releaseNoteInputSchema } from "@/lib/release-notes";
 import { guides } from "@/lib/mock/guides";
 import { analyses } from "@/lib/mock/analyses";
 import { templates } from "@/lib/mock/library";
@@ -118,19 +117,5 @@ describe("SOPs", () => {
     expect(move(["a", "b", "c"], 2, -1)).toEqual(["a", "c", "b"]);
     expect(move(["a", "b"], 0, -1)).toEqual(["a", "b"]);
     expect(move(["a", "b"], 1, 1)).toEqual(["a", "b"]);
-  });
-});
-
-describe("version notes", () => {
-  it("sort versions newest first, number by number", () => {
-    expect(["2.1", "2.10", "2.9", "1.9.9", "2.2 SP1", "2.2"].sort(compareVersionsDesc)).toEqual(["2.10", "2.9", "2.2 SP1", "2.2", "2.1", "1.9.9"]);
-  });
-
-  it("need a product, version and title; guide links must be guide numbers", () => {
-    const ok = { product: "AutoCount POS", version: "2.2", type: "Fix", title: "Drawer opens twice", guideCodes: ["G-1001"] };
-    expect(releaseNoteInputSchema.safeParse(ok).success).toBe(true);
-    expect(releaseNoteInputSchema.safeParse({ ...ok, product: "" }).success).toBe(false);
-    expect(releaseNoteInputSchema.safeParse({ ...ok, version: " " }).success).toBe(false);
-    expect(releaseNoteInputSchema.safeParse({ ...ok, guideCodes: ["1001"] }).success).toBe(false);
   });
 });

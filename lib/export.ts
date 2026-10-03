@@ -1,4 +1,4 @@
-import type { Analysis, Guide, ReleaseNote, Template } from "@/lib/types";
+import type { Analysis, Guide, Template } from "@/lib/types";
 import type { Sop } from "@/lib/sop";
 
 /**
@@ -73,10 +73,6 @@ export function sopsSheet(sops: Sop[]): Sheet {
       ...sops.map((s) => [s.id, s.title, s.guideCode ?? "", s.version, s.scope, s.purpose, numbered(s.steps.map((x) => x.text)), s.checks.join("\n"), day(s.updatedAt)]),
     ],
   };
-}
-
-export function releaseNotesSheet(notes: ReleaseNote[]): Sheet {
-  return { name: "Version notes", rows: [["Product", "Version", "Type", "Title", "Detail", "Linked guides"], ...notes.map((n) => [n.product, n.version, n.type, n.title, n.detail, n.guideIds.join(", ")])] };
 }
 
 /** Excel refuses cells over 32,767 characters; anything longer is cut with a note rather than failing the file. */

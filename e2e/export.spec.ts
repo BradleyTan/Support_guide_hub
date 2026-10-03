@@ -29,6 +29,6 @@ test("Settings exports everything as one workbook", async ({ page }) => {
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export to Excel" }).click()]);
   expect(download.suggestedFilename()).toMatch(/^support-desk-everything-\d{4}-\d{2}-\d{2}\.xlsx$/);
   const wb = await workbook((await download.path())!);
-  expect(wb.SheetNames).toEqual(["Guides", "Analyses", "SOPs", "Templates", "Version notes"]);
+  expect(wb.SheetNames).toEqual(["Guides", "Analyses", "SOPs", "Templates"]);
   await expect(page.getByText("Exported")).toBeVisible();
 });

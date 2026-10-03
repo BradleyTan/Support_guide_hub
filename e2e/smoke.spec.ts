@@ -14,7 +14,6 @@ const routes: [string, RegExp][] = [
   ["/replies", /Reply generator/],
   ["/sop", /SOP builder/],
   ["/templates", /Templates/],
-  ["/releases", /Versions & releases/],
   ["/settings", /Settings/],
 ];
 

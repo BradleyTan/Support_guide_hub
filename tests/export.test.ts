@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { EXCEL_CELL_MAX, analysesSheet, exportFileName, fitCell, guidesSheet, releaseNotesSheet, sopsSheet, templatesSheet } from "@/lib/export";
+import { EXCEL_CELL_MAX, analysesSheet, exportFileName, fitCell, guidesSheet, sopsSheet, templatesSheet } from "@/lib/export";
 import { autoMapColumns, reviewRows, splitHeader } from "@/lib/import";
 import { guideToInput } from "@/lib/guide-schema";
 import { guides } from "@/lib/mock/guides";
 import { analyses } from "@/lib/mock/analyses";
-import { releaseNotes, templates } from "@/lib/mock/library";
+import { templates } from "@/lib/mock/library";
 
 describe("guides export", () => {
   it("can be imported again with every field intact", () => {
@@ -29,7 +29,6 @@ describe("other sheets", () => {
     expect(a.rows).toHaveLength(analyses.length + 1);
     expect(String(a.rows[1][5])).toMatch(/^.+\n(Dr|Cr) /); // journal lines spelled out
     expect(templatesSheet(templates).rows[1]).toEqual([templates[0].kind, templates[0].title, templates[0].body, templates[0].tags.join(", "), templates[0].uses]);
-    expect(releaseNotesSheet(releaseNotes).rows[1][5]).toBe(releaseNotes[0].guideIds.join(", "));
     const sop = { id: "SOP-1", dbId: "x", guideCode: "G-1001", title: "T", version: "2.1", purpose: "P", scope: "S", steps: [{ text: "A", attachmentId: null }, { text: "B", attachmentId: null }], checks: ["C1", "C2"], updatedAt: "2026-10-02T03:00:00Z" };
     expect(sopsSheet([sop]).rows[1]).toEqual(["SOP-1", "T", "G-1001", "2.1", "S", "P", "1. A\n2. B", "C1\nC2", "2026-10-02"]);
   });

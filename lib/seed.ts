@@ -1,5 +1,5 @@
 import type { TablesInsert } from "@/lib/supabase/database.types";
-import type { Analysis, Guide, ReleaseNote, Template } from "@/lib/types";
+import type { Analysis, Guide, Template } from "@/lib/types";
 import type { AnalysisResult } from "@/lib/analysis-schema";
 
 /** Pure mapping from the sample data to database rows, so the seed can be unit-tested without a database. */
@@ -43,8 +43,4 @@ export function analysisToRow(a: Analysis, codeMap: Map<string, string>): Tables
 
 export function templateToRow(t: Template): TablesInsert<"templates"> {
   return { kind: t.kind, title: t.title, body: t.body, tags: t.tags, uses: t.uses };
-}
-
-export function releaseNoteToRow(r: ReleaseNote): TablesInsert<"release_notes"> {
-  return { product: r.product, version: r.version, type: r.type, title: r.title, detail: r.detail };
 }

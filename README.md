@@ -6,12 +6,11 @@ Everything runs on free tiers and open-source libraries: no paid services, and n
 
 > **Status: Phase 7 (go-live).** All features are built. Hosting: Netlify free plan; follow [docs/GO-LIVE.md](docs/GO-LIVE.md) to deploy.
 
-## Replies, SOPs, templates and version notes (no AI)
+## Replies, SOPs and templates (no AI)
 
 - **Reply generator:** choose a guide or analysis, a reply template (or the standard reply), the client’s name and the channel (Zoho Desk email or WhatsApp). Placeholders such as `{contact}`, `{title}`, `{cause}`, `{steps}`, `{prevention}`, and for analyses `{entries}` and `{treatment}`, are filled in; a line whose placeholders have nothing to fill is left out. WhatsApp puts headings in *bold*. Edit the draft, then copy it. English only. AutoCount menu paths from analyses are never put in a reply, because they aren’t confirmed.
 - **Templates & snippets:** create, edit, delete and copy Reply, SQL and Checklist templates. “Used n×” counts copies and replies.
 - **SOP builder:** start from a guide (its steps, product, version and module), edit, reorder, add a screenshot from the guide under any step and list end checks. Saved as SOP-1, SOP-2 … (table `sops`). **Print / Save as PDF** opens a clean page for the browser’s Save as PDF; screenshot links last 10 minutes.
-- **Versions & releases:** your own notes (known issue, fix, note) per product and version, linked to guides; linked notes show on the guide page.
 
 ## Importing guides
 
@@ -51,7 +50,7 @@ Solution: Check the TIN with the Search TIN function. …
    - **Site URL:** `http://localhost:3001` (later: your live address)
    - **Redirect URLs:** add `http://localhost:3001/**` (later also the live address)
 4. `npm run dev` and open http://localhost:3001. Create your account, confirm the email, sign in.
-5. On the empty Home screen, **Load sample data** adds 10 sample guides, analyses, templates and version notes to your account (optional).
+5. On the empty Home screen, **Load sample data** adds 10 sample guides, analyses and templates to your account (optional).
 
 Keyboard: `Ctrl K` command palette · `/` search · `N` new guide.
 
@@ -85,7 +84,7 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ### Backups
 
-Free Supabase projects get daily backups kept for a limited time, and free projects pause after about a week without use (resume them from the dashboard). For your own copy, **Settings → Export everything** downloads guides, analyses, SOPs, templates and version notes as one Excel file (the Guides sheet can be imported again). The guide library’s **Export** button saves the guides currently shown. For a full database dump: `npx supabase db dump --db-url "<connection string>" -f backup.sql`, using the connection string from Supabase → Project settings → Database.
+Free Supabase projects get daily backups kept for a limited time, and free projects pause after about a week without use (resume them from the dashboard). For your own copy, **Settings → Export everything** downloads guides, analyses, SOPs and templates as one Excel file (the Guides sheet can be imported again). The guide library’s **Export** button saves the guides currently shown. For a full database dump: `npx supabase db dump --db-url "<connection string>" -f backup.sql`, using the connection string from Supabase → Project settings → Database.
 
 ## Hosting
 

@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures";
 import { createClient } from "@supabase/supabase-js";
 import { allowWrites, hasTestAccount } from "./helpers";
 
-/** Reply generator, templates, SOP builder and version notes (Phase 6). */
+/** Reply generator, templates and SOP builder (Phase 6). */
 test.skip(!hasTestAccount, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
 
 async function needsGuides(page: Page) {
@@ -46,7 +46,7 @@ test.describe("read-only", () => {
     await expect(page.getByText("That page or guide doesn’t exist")).toBeVisible();
   });
 
-  test("template and version-note forms explain what's missing (nothing is saved)", async ({ page }) => {
+  test("the template form explains what's missing (nothing is saved)", async ({ page }) => {
     await page.goto("/templates");
     await page.getByRole("button", { name: "New template" }).click();
     await page.getByRole("button", { name: "Create template" }).click();
@@ -54,12 +54,6 @@ test.describe("read-only", () => {
     await page.getByRole("button", { name: "{steps}" }).click();
     await expect(page.getByLabel("Text")).toHaveValue("{steps}");
     await page.keyboard.press("Escape");
-
-    await page.goto("/releases");
-    await page.getByRole("button", { name: /^Add (a )?note$/ }).first().click();
-    await page.getByRole("button", { name: "Add note" }).last().click();
-    await expect(page.getByText("Choose the product.")).toBeVisible();
-    await expect(page.getByText(/Enter the AutoCount version/)).toBeVisible();
   });
 });
 
@@ -76,7 +70,6 @@ test.describe("saving (writes data)", () => {
     await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
     await sb.from("templates").delete().like("title", "[e2e]%");
     await sb.from("sops").delete().like("title", "%[e2e]%");
-    await sb.from("release_notes").delete().like("title", "[e2e]%");
     await sb.auth.signOut({ scope: "local" });
   });
 
@@ -122,31 +115,5 @@ test.describe("saving (writes data)", () => {
     await page.getByRole("button", { name: "Delete SOP" }).click();
     await page.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(page).toHaveURL(/\/sop$/);
-  });
-
-  test("a version note linked to a guide shows on the guide page", async ({ page }) => {
-    await page.goto("/releases");
-    await page.getByRole("button", { name: /^Add (a )?note$/ }).first().click();
-    await page.getByLabel("Product").click();
-    await page.getByRole("option", { name: "Accounting" }).click();
-    // Exact labels: the dialog itself is named "Add version note".
-    await page.getByLabel("Version", { exact: true }).fill("9.9");
-    await page.getByLabel("Title", { exact: true }).fill(`${RUN} note`);
-    const firstGuide = page.getByRole("dialog").getByRole("checkbox").first();
-    test.skip(!(await firstGuide.isVisible()), "the test account has no guides");
-    await firstGuide.check();
-    const guideCode = (await page.getByRole("dialog").locator("label", { has: firstGuide }).locator(".font-mono").textContent())!;
-    await page.getByRole("button", { name: "Add note" }).last().click();
-    await expect(page.getByText("Note added")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Accounting 9.9" })).toBeVisible();
-
-    await page.goto(`/guides/${guideCode}`);
-    await expect(page.getByRole("heading", { name: "Version notes" })).toBeVisible();
-    await expect(page.getByText(`${RUN} note`)).toBeVisible();
-
-    await page.goto("/releases");
-    await page.getByRole("button", { name: `Delete note: ${RUN} note` }).click();
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await expect(page.getByText("Note deleted")).toBeVisible();
   });
 });

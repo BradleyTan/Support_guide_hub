@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, ExternalLink, History, Loader2, MessageSquareText, Pencil, Pin, Trash2, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, BookOpenCheck, Copy, ExternalLink, Loader2, MessageSquareText, Pencil, Pin, Trash2, X } from "lucide-react";
 import { unpin } from "@/app/(app)/search/actions";
 import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -228,25 +228,6 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
             )}
           </section>
 
-          {g.versionNotes && g.versionNotes.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="flex items-center gap-1.5 font-medium">
-                <History className="size-3.5" /> Version notes
-              </h2>
-              <ul className="space-y-1.5">
-                {g.versionNotes.map((n) => (
-                  <li key={n.id}>
-                    <Link href="/releases" className="hover:underline">
-                      <span className="text-xs text-muted-foreground">
-                        {shortProduct(n.product)} {n.version} · {n.type}
-                      </span>
-                      <span className="block">{n.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
 
           {similar.length > 0 && (
             <section className="space-y-2">

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/lib/supabase/database.types";
 import { parseSteps as parseSopSteps, type Sop, type SopImage } from "@/lib/sop";
 import { analysisResultSchema } from "@/lib/analysis-schema";
-import type { Analysis, Attachment, Category, Confidence, Guide, Product, ReleaseNote, Template, TemplateKind } from "@/lib/types";
+import type { Analysis, Attachment, Category, Confidence, Guide, Product, Template, TemplateKind } from "@/lib/types";
 import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
 
 /** Server-side reads. Every query runs as the signed-in user, so RLS limits results to their own rows. */
@@ -58,18 +58,12 @@ export const getGuide = cache(async (code: string): Promise<Guide | null> => {
     supabase.from("guide_revisions").select("created_at, summary").eq("guide_id", r.id).order("created_at"),
     supabase.from("pins").select("id, title, url, site").eq("guide_id", r.id).order("created_at"),
   ]);
-  const { data: notes } = await supabase.from("release_note_guides").select("release_notes(id, product, version, type, title, deleted_at)").eq("guide_id", r.id);
   return {
     ...rowToGuide(asRow(r), {
       attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
       revisions: (rev.data ?? []).map((v) => ({ at: v.created_at, summary: v.summary })),
     }),
     pins: pins.data ?? [],
-    versionNotes: (notes ?? []).flatMap((n) =>
-      n.release_notes && !n.release_notes.deleted_at
-        ? [{ id: n.release_notes.id, product: n.release_notes.product as Product, version: n.release_notes.version, type: n.release_notes.type as ReleaseNote["type"], title: n.release_notes.title }]
-        : [],
-    ),
   };
 });
 
@@ -110,25 +104,6 @@ export const getTemplates = cache(async (): Promise<Template[]> => {
   const { data, error } = await supabase.from("templates").select("id, kind, title, body, tags, uses").is("deleted_at", null).order("uses", { ascending: false });
   if (error) throw new Error(`Couldn’t load templates: ${error.message}`);
   return data.map((t) => ({ ...t, kind: t.kind as TemplateKind }));
-});
-
-export const getReleaseNotes = cache(async (): Promise<ReleaseNote[]> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("release_notes")
-    .select("id, product, version, type, title, detail, release_note_guides(guides(code))")
-    .is("deleted_at", null)
-    .order("version", { ascending: false });
-  if (error) throw new Error(`Couldn’t load release notes: ${error.message}`);
-  return data.map((r) => ({
-    id: r.id,
-    product: r.product as Product,
-    version: r.version,
-    type: r.type as ReleaseNote["type"],
-    title: r.title,
-    detail: r.detail,
-    guideIds: (r.release_note_guides ?? []).flatMap((l) => (l.guides ? [l.guides.code] : [])),
-  }));
 });
 
 /** Guides opened in the activity window, most opened first (deleted guides left out). */

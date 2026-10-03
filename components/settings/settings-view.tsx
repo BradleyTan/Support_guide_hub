@@ -184,7 +184,7 @@ export function SettingsView({ deleted, indexed, searchesLogged }: { deleted: Gu
         </Card>
 
         <Card title="Your data">
-          <Row title="Export everything" description="Guides, analyses, SOPs, templates and version notes as one Excel file, one sheet each. Items in the bin aren’t included.">
+          <Row title="Export everything" description="Guides, analyses, SOPs and templates as one Excel file, one sheet each. Items in the bin aren’t included.">
             <ExportEverything />
           </Row>
           <DeletedGuides guides={deleted} />

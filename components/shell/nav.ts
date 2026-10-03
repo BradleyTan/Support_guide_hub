@@ -4,7 +4,6 @@ import {
   Calculator,
   FileStack,
   ChartColumn,
-  History,
   LayoutDashboard,
   MessageSquareText,
   Search,
@@ -44,7 +43,6 @@ export const navGroups: NavGroup[] = [
       { href: "/replies", label: "Reply generator", icon: MessageSquareText },
       { href: "/sop", label: "SOP builder", icon: BookOpenCheck },
       { href: "/templates", label: "Templates & snippets", icon: FileStack },
-      { href: "/releases", label: "Versions & releases", icon: History },
     ],
   },
 ];
