@@ -99,7 +99,7 @@ npm run test:unit # unit tests only (Vitest)
 npm run build     # production build
 ```
 
-Browser tests run against a production build on port 3100. Signed-in tests need `E2E_EMAIL` and `E2E_PASSWORD` for a **dedicated test account** (read from `.env.local`); they sign in once per run and reuse the session. Tests that create, edit and delete guides (`e2e/guides.spec.ts`) also need `E2E_ALLOW_WRITES=1`; they only touch guides titled `[e2e] …` and remove them afterwards. Traces and screenshots are off because they would record what's typed, including the test password. To run only the signed-out tests, set `E2E_SIGNED_IN=0`. CI (`.github/workflows/ci.yml`) runs `npm test` on every push.
+Browser tests run against a production build on port 3100. Signed-in tests need `E2E_EMAIL` and `E2E_PASSWORD` for a **dedicated test account** (read from `.env.local`); they sign in once per run and reuse the session. Tests that create, edit and delete guides (`e2e/guides.spec.ts`) also need `E2E_ALLOW_WRITES=1`; they only touch guides titled `[e2e] …` and remove them afterwards. Traces and screenshots are off because they would record what's typed, including the test password. To run only the signed-out tests, set `E2E_SIGNED_IN=0`. To test the live site instead of a local build, set `E2E_BASE_URL=https://atc-supportguide.netlify.app`: only signed-out tests run there, so the test account is never typed into a live site. CI (`.github/workflows/ci.yml`) runs `npm test` on every push.
 
 ## Structure
 

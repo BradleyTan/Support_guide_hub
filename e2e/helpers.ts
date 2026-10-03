@@ -1,8 +1,13 @@
 import { expect, type Browser, type Page } from "@playwright/test";
 
 export const AUTH_FILE = "e2e/.auth/user.json";
-/** Set E2E_SIGNED_IN=0 to run only the signed-out tests (e.g. while test account details are being fixed). */
-export const hasTestAccount = !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD && process.env.E2E_SIGNED_IN !== "0";
+/** E2E_BASE_URL runs the tests against another address (e.g. the live site) instead of a local build. */
+export const remoteTarget = !!process.env.E2E_BASE_URL && !/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(process.env.E2E_BASE_URL);
+/**
+ * Signed-in tests run only against this PC: the test account is never typed into a live site.
+ * Set E2E_SIGNED_IN=0 to run only the signed-out tests locally too.
+ */
+export const hasTestAccount = !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD && process.env.E2E_SIGNED_IN !== "0" && !remoteTarget;
 export const allowWrites = hasTestAccount && process.env.E2E_ALLOW_WRITES === "1";
 
 /**
