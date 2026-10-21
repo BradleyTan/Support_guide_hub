@@ -17,9 +17,10 @@ const TOPICS: Record<(typeof KNOWLEDGE_CATEGORIES)[number], string[]> = {
 const sentences = (s: string) => s.split(/(?<=[.!?])\s+/).filter((x) => x.trim()).length;
 
 describe("starter articles", () => {
-  it("includes the basics, customer and supplier topics", () => {
+  it("includes every topic in every category", () => {
     const slugs = new Set(STARTER_ARTICLES.map((a) => a.slug));
-    for (const cat of ["Basics", "Customers (AR)", "Suppliers (AP)"] as const) for (const slug of TOPICS[cat]) expect(slugs.has(slug), slug).toBe(true);
+    for (const cat of KNOWLEDGE_CATEGORIES) for (const slug of TOPICS[cat]) expect(slugs.has(slug), slug).toBe(true);
+    expect(STARTER_ARTICLES.length).toBeGreaterThanOrEqual(36);
   });
 
   it("covers every topic of each category it includes", () => {
