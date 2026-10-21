@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/lib/supabase/database.types";
 import { parseSteps as parseSopSteps, type Sop, type SopImage } from "@/lib/sop";
+import { rowToArticle, type KnowledgeArticle, type KnowledgeRow } from "@/lib/knowledge/model";
 import { analysisResultSchema } from "@/lib/analysis-schema";
 import type { Analysis, Attachment, Category, Confidence, Guide, Product, Template, TemplateKind } from "@/lib/types";
 import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
@@ -205,4 +206,39 @@ export const getSop = cache(async (code: string): Promise<{ sop: Sop; images: So
   if (!data) return null;
   const sop = rowToSop(data as unknown as SopRow);
   return { sop, images: await getGuideImages(sop.guideCode) };
+});
+
+const ARTICLE_COLUMNS =
+  "id, starter_slug, starter_version, edited, title, category, tell_customer, what_it_is, example, desktop_steps, cloud_steps, steps_verified, mistakes, related, sources, reviewed, updated_at, deleted_at";
+
+/** Knowledge hub articles (not in the bin), by category then title. */
+export const getArticles = cache(async (): Promise<KnowledgeArticle[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("knowledge_articles").select(ARTICLE_COLUMNS).is("deleted_at", null).order("category").order("title");
+  if (error) throw new Error(`Couldn’t load the Knowledge hub: ${error.message}`);
+  return (data as KnowledgeRow[]).map(rowToArticle);
+});
+
+export const getArticle = cache(async (id: string): Promise<KnowledgeArticle | null> => {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("knowledge_articles").select(ARTICLE_COLUMNS).eq("id", id).is("deleted_at", null).maybeSingle();
+  if (error) throw new Error(`Couldn’t load the article: ${error.message}`);
+  return data ? rowToArticle(data as KnowledgeRow) : null;
+});
+
+/** Articles in the bin (deleted in the last 30 days), newest first. */
+export const getDeletedArticles = cache(async (): Promise<KnowledgeArticle[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("knowledge_articles").select(ARTICLE_COLUMNS).not("deleted_at", "is", null).order("deleted_at", { ascending: false });
+  if (error) throw new Error(`Couldn’t load deleted articles: ${error.message}`);
+  return (data as KnowledgeRow[]).map(rowToArticle);
+});
+
+/** Starter slugs the user already has, including copies in the bin. */
+export const getStarterSlugsInUse = cache(async (): Promise<string[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("knowledge_articles").select("starter_slug").not("starter_slug", "is", null);
+  if (error) throw new Error(`Couldn’t load the Knowledge hub: ${error.message}`);
+  return data.flatMap((r) => (r.starter_slug ? [r.starter_slug] : []));
 });

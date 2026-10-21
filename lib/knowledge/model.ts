@@ -90,3 +90,72 @@ export function hasNewerVersion(a: Pick<KnowledgeArticle, "starterSlug" | "start
   const s = starters.find((x) => x.slug === a.starterSlug);
   return !!s && s.version > a.starterVersion;
 }
+
+/** The columns the app reads from public.knowledge_articles (user_id, fts and created_at aren't needed). */
+export interface KnowledgeRow {
+  id: string;
+  starter_slug: string | null;
+  starter_version: number | null;
+  edited: boolean;
+  title: string;
+  category: string;
+  tell_customer: string;
+  what_it_is: string;
+  example: string;
+  desktop_steps: string | null;
+  cloud_steps: string | null;
+  steps_verified: boolean;
+  mistakes: string[];
+  related: string[];
+  sources: unknown;
+  reviewed: boolean;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+/** Content columns of a fresh, unreviewed copy of a starter article. */
+export function starterToRow(s: StarterArticle) {
+  return {
+    starter_slug: s.slug,
+    starter_version: s.version,
+    edited: false,
+    reviewed: false,
+    steps_verified: false,
+    title: s.title,
+    category: s.category,
+    tell_customer: s.tellCustomer,
+    what_it_is: s.whatItIs,
+    example: s.example,
+    desktop_steps: s.desktopSteps,
+    cloud_steps: s.cloudSteps,
+    mistakes: s.mistakes,
+    related: s.related,
+    sources: s.sources,
+  };
+}
+
+const sourceSchema = z.object({ label: z.string(), url: z.string() });
+
+export function rowToArticle(r: KnowledgeRow): KnowledgeArticle {
+  const sources = Array.isArray(r.sources) ? r.sources.flatMap((x) => (sourceSchema.safeParse(x).success ? [sourceSchema.parse(x)] : [])) : [];
+  return {
+    id: r.id,
+    starterSlug: r.starter_slug,
+    starterVersion: r.starter_version,
+    edited: r.edited,
+    reviewed: r.reviewed,
+    stepsVerified: r.steps_verified,
+    title: r.title,
+    category: r.category as KnowledgeCategory,
+    tellCustomer: r.tell_customer,
+    whatItIs: r.what_it_is,
+    example: r.example,
+    desktopSteps: r.desktop_steps,
+    cloudSteps: r.cloud_steps,
+    mistakes: r.mistakes,
+    related: r.related,
+    sources,
+    updatedAt: r.updated_at,
+    deletedAt: r.deleted_at ?? undefined,
+  };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { articleInputSchema, hasNewerVersion, missingStarters, type StarterArticle } from "@/lib/knowledge/model";
+import { articleInputSchema, hasNewerVersion, missingStarters, rowToArticle, starterToRow, type StarterArticle } from "@/lib/knowledge/model";
 
 function starter(slug: string, version = 1): StarterArticle {
   return {
@@ -82,5 +82,41 @@ describe("articleInputSchema", () => {
     const parsed = articleInputSchema.parse({ ...validInput, desktopSteps: "  ", cloudSteps: "Sales > Invoice" });
     expect(parsed.desktopSteps).toBeNull();
     expect(parsed.cloudSteps).toBe("Sales > Invoice");
+  });
+});
+
+describe("row mapping", () => {
+  const s = { ...starter("debtor-aging", 3), category: "Customers (AR)" as const, desktopSteps: "Reports > Debtor Aging", mistakes: ["Wrong date"], related: ["debtor-statement"] };
+
+  it("starterToRow copies every content field and marks a fresh, unreviewed copy", () => {
+    expect(starterToRow(s)).toEqual({
+      starter_slug: "debtor-aging",
+      starter_version: 3,
+      edited: false,
+      reviewed: false,
+      steps_verified: false,
+      title: s.title,
+      category: "Customers (AR)",
+      tell_customer: s.tellCustomer,
+      what_it_is: s.whatItIs,
+      example: s.example,
+      desktop_steps: "Reports > Debtor Aging",
+      cloud_steps: null,
+      mistakes: ["Wrong date"],
+      related: ["debtor-statement"],
+      sources: s.sources,
+    });
+  });
+
+  it("rowToArticle reads a stored copy back with the same content", () => {
+    const row = { ...starterToRow(s), id: "11111111-1111-4111-8111-111111111111", updated_at: "2026-10-21T00:00:00Z", deleted_at: null };
+    const a = rowToArticle(row);
+    expect(a).toMatchObject({ id: row.id, starterSlug: "debtor-aging", starterVersion: 3, edited: false, title: s.title, desktopSteps: "Reports > Debtor Aging", cloudSteps: null, sources: s.sources });
+    expect(a.deletedAt).toBeUndefined();
+  });
+
+  it("rowToArticle drops malformed sources instead of failing", () => {
+    const row = { ...starterToRow(s), id: "x", updated_at: "2026-10-21T00:00:00Z", deleted_at: null, sources: [{ label: "ok", url: "https://a.b" }, "junk", { url: "https://c.d" }] };
+    expect(rowToArticle(row).sources).toEqual([{ label: "ok", url: "https://a.b" }]);
   });
 });
