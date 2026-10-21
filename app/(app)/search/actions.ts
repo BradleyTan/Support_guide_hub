@@ -120,3 +120,25 @@ export async function unpin(pinId: string): Promise<{ ok: true } | { ok: false; 
   if (data.guides?.code) revalidatePath(`/guides/${data.guides.code}`);
   return { ok: true };
 }
+
+export type KnowledgeHit = { id: string; title: string; category: string; tellCustomer: string };
+
+/** Your Knowledge hub articles for a query (same words or similar spelling), in rank order. RLS applies. */
+export async function searchKnowledge(query: string): Promise<{ ok: true; hits: KnowledgeHit[] } | { ok: false; error: string }> {
+  const q = querySchema.safeParse(query);
+  if (!q.success) return { ok: true, hits: [] };
+  if (!(await getUser())) return { ok: false, error: "Your session has ended. Please sign in again." };
+  const supabase = await createClient();
+  const { data: ranked, error } = await supabase.rpc("search_knowledge", { p_query: q.data, p_limit: 5 });
+  if (error) return { ok: false, error: "Knowledge hub search didn’t finish. Please try again." };
+  if (!ranked.length) return { ok: true, hits: [] };
+  const { data: rows } = await supabase.from("knowledge_articles").select("id, title, category, tell_customer").in("id", ranked.map((r) => r.id));
+  const byId = new Map((rows ?? []).map((r) => [r.id, r]));
+  return {
+    ok: true,
+    hits: ranked.flatMap((r) => {
+      const a = byId.get(r.id);
+      return a ? [{ id: a.id, title: a.title, category: a.category, tellCustomer: a.tell_customer }] : [];
+    }),
+  };
+}

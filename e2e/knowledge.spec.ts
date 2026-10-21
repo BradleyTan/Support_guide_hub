@@ -99,5 +99,11 @@ test.describe("saving (writes data)", () => {
     await page.getByLabel("Example").fill("Total RM 10.97 becomes RM 10.95.");
     await page.getByRole("button", { name: "Save article" }).click();
     await expect(page.getByText("Total RM 10.97 becomes RM 10.95.")).toBeVisible();
+
+    // Search finds it under its own Knowledge hub heading, and it links to the article.
+    await page.goto(`/search?q=${encodeURIComponent("Rounding adjustment")}`);
+    const hub = page.locator("section", { has: page.getByRole("heading", { name: "Knowledge hub" }) });
+    await hub.getByRole("link", { name: /\[e2e\] Rounding adjustment/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment" })).toBeVisible();
   });
 });

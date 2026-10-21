@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { BookText, ExternalLink, Globe, Loader2, Pin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { BookText, ExternalLink, Globe, GraduationCap, Loader2, Pin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { PageHeader } from "@/components/shared/page-header";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
-import { pinToGuide, searchMyGuides, searchOfficialSources, type GuideHit, type MatchSource, type OfficialResult, type SearchFilters } from "@/app/(app)/search/actions";
+import { pinToGuide, searchKnowledge, searchMyGuides, searchOfficialSources, type GuideHit, type KnowledgeHit, type MatchSource, type OfficialResult, type SearchFilters } from "@/app/(app)/search/actions";
 import { googleFallbackUrl, HELP_CENTRES, OTHER_OFFICIAL_SITES, type OfficialHit } from "@/lib/official-sites";
 import { shortProduct } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
@@ -94,14 +94,18 @@ export function SearchView({
   initialQuery,
   initialMine,
   initialOfficial,
+  initialKnowledge = [],
   guides,
 }: {
   initialQuery: string;
   /** First results, computed on the server when the page is opened with ?q= */
   initialMine: Awaited<ReturnType<typeof searchMyGuides>> | null;
   initialOfficial: OfficialState;
+  /** Knowledge hub matches for the first query (empty when there are none). */
+  initialKnowledge?: KnowledgeHit[];
   guides: { id: string; title: string }[];
 }) {
+  const [knowledge, setKnowledge] = useState<KnowledgeHit[]>(initialKnowledge);
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<SearchFilters>({});
@@ -119,8 +123,11 @@ export function SearchView({
     if (!q.trim()) {
       setMine(null);
       setOfficial(null);
+      setKnowledge([]);
       return;
     }
+    // Knowledge hub matches are a bonus: a failure just shows none (guides and official results report their own errors).
+    void searchKnowledge(q).then((res) => setKnowledge(res.ok ? res.hits : []));
     startMine(async () => {
       const res = await searchMyGuides(q, f);
       if (res.ok) {
@@ -276,6 +283,23 @@ export function SearchView({
           .
         </EmptyState>
       ) : (
+        <>
+        {knowledge.length > 0 && (
+          <section aria-labelledby="sec-knowledge" className="mb-6 min-w-0">
+            <SectionTitle id="sec-knowledge" icon={GraduationCap} title="Knowledge hub" meta={`${knowledge.length} ${knowledge.length === 1 ? "article" : "articles"}`} />
+            <ul className="grid gap-2 md:grid-cols-2">
+              {knowledge.map((k) => (
+                <li key={k.id}>
+                  <Link href={`/knowledge/${k.id}`} className="group block rounded-lg border bg-card p-3 transition-colors hover:border-primary/50">
+                    <span className="block text-sm font-medium group-hover:underline">{k.title}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{k.category}</span>
+                    <span className="mt-1 line-clamp-2 block text-sm text-muted-foreground">{k.tellCustomer}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
           <section aria-labelledby="sec-mine" aria-busy={loadingMine} className="min-w-0">
             <SectionTitle
@@ -404,6 +428,7 @@ export function SearchView({
             )}
           </section>
         </div>
+        </>
       )}
 
       <PinDialog hit={pinning} guides={guides} onClose={() => setPinning(null)} />

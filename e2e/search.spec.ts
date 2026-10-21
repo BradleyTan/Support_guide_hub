@@ -41,3 +41,11 @@ test("filters open and product chips toggle", async ({ page }) => {
   await payroll.click();
   await expect(payroll).toHaveAttribute("aria-pressed", "true");
 });
+
+test("odd characters in a search don't cause an error", async ({ page }) => {
+  for (const q of ["'%", "%", "'"]) {
+    await page.goto(`/search?q=${encodeURIComponent(q)}`);
+    await expect(page.getByRole("heading", { level: 1, name: "Search" })).toBeVisible();
+    await expect(page.getByText(/didn’t finish/)).toHaveCount(0);
+  }
+});
