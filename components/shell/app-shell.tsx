@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CommandPalette, type PaletteGuide } from "@/components/shell/command-palette";
+import { CommandPalette, type PaletteGuide, type PaletteArticle } from "@/components/shell/command-palette";
 import { isActive, navGroups, settingsItem, type NavItem } from "@/components/shell/nav";
 import { signOut } from "@/app/login/actions";
 
@@ -104,7 +104,7 @@ function ThemeToggle() {
 
 const mobileTabs = navGroups[0].items.filter((i) => !i.notOnPhoneTabs);
 
-export function AppShell({ email, guides, children }: { email: string; guides: PaletteGuide[]; children: React.ReactNode }) {
+export function AppShell({ email, guides, articles = [], children }: { email: string; guides: PaletteGuide[]; articles?: PaletteArticle[]; children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -172,7 +172,7 @@ export function AppShell({ email, guides, children }: { email: string; guides: P
         </button>
       </nav>
 
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} guides={guides} />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} guides={guides} articles={articles} />
     </div>
   );
 }

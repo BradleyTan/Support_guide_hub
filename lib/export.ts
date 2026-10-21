@@ -1,5 +1,6 @@
 import type { Analysis, Guide, Template } from "@/lib/types";
 import type { Sop } from "@/lib/sop";
+import { NOT_FOUND_STEPS, type KnowledgeArticle } from "@/lib/knowledge/model";
 
 /**
  * Rows for the Excel exports (pure: no browser or database access). The Guides sheet uses the same column
@@ -71,6 +72,28 @@ export function sopsSheet(sops: Sop[]): Sheet {
     rows: [
       ["SOP no.", "Title", "From guide", "Version", "Applies to", "Purpose", "Steps", "Checks", "Updated"],
       ...sops.map((s) => [s.id, s.title, s.guideCode ?? "", s.version, s.scope, s.purpose, numbered(s.steps.map((x) => x.text)), s.checks.join("\n"), day(s.updatedAt)]),
+    ],
+  };
+}
+
+export function knowledgeSheet(articles: KnowledgeArticle[]): Sheet {
+  return {
+    name: "Knowledge hub",
+    rows: [
+      ["Title", "Category", "Tell the customer", "What it is", "Example", "Desktop", "Cloud", "Common mistakes", "Sources", "Reviewed", "Updated"],
+      ...articles.map((a) => [
+        a.title,
+        a.category,
+        a.tellCustomer,
+        a.whatItIs,
+        a.example,
+        a.desktopSteps ?? NOT_FOUND_STEPS,
+        a.cloudSteps ?? NOT_FOUND_STEPS,
+        a.mistakes.join("\n"),
+        a.sources.map((s) => `${s.label}: ${s.url}`).join("\n"),
+        a.reviewed ? "Yes" : "No",
+        day(a.updatedAt),
+      ]),
     ],
   };
 }

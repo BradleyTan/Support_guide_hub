@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, KeyRound, Loader2, RotateCcw } from "lucide-react";
 import { restoreGuide } from "@/app/(app)/guides/actions";
+import { restoreArticle } from "@/app/(app)/knowledge/actions";
+import type { KnowledgeArticle } from "@/lib/knowledge/model";
 import { clearSearchHistory } from "@/app/(app)/insights/actions";
 import { exportEverything } from "@/app/(app)/settings/actions";
 import { downloadXlsx } from "@/lib/download-xlsx";
@@ -129,7 +131,57 @@ function DeletedGuides({ guides }: { guides: Guide[] }) {
   );
 }
 
-export function SettingsView({ deleted, indexed, searchesLogged }: { deleted: Guide[]; indexed: { count: number; lastRefreshed: string | null }; searchesLogged: number }) {
+function DeletedArticles({ articles }: { articles: KnowledgeArticle[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  return (
+    <div className="py-4">
+      <p className="text-sm font-medium">Deleted Knowledge hub articles</p>
+      <p className="mt-0.5 max-w-[60ch] text-sm text-muted-foreground">Kept here for 30 days so you can restore them, then removed for good overnight.</p>
+      {articles.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">The bin is empty.</p>
+      ) : (
+        <ul className="mt-3 divide-y rounded-md border bg-background">
+          {articles.map((a) => (
+            <li key={a.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+              <span className="min-w-0 flex-1 truncate">{a.title}</span>
+              <span className="text-xs text-muted-foreground">deleted {a.deletedAt ? formatDate(a.deletedAt) : ""}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label={`Restore ${a.title}`}
+                disabled={busy === a.id}
+                onClick={async () => {
+                  setBusy(a.id);
+                  const res = await restoreArticle(a.id);
+                  setBusy(null);
+                  if (res.ok) {
+                    toast.success(`“${a.title}” restored`);
+                    router.refresh();
+                  } else toast.error(res.error);
+                }}
+              >
+                {busy === a.id ? <Loader2 className="animate-spin" /> : <RotateCcw />} Restore
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function SettingsView({
+  deleted,
+  deletedArticles,
+  indexed,
+  searchesLogged,
+}: {
+  deleted: Guide[];
+  deletedArticles: KnowledgeArticle[];
+  indexed: { count: number; lastRefreshed: string | null };
+  searchesLogged: number;
+}) {
   return (
     <>
       <PageHeader title="Settings" description="Account, official sources and your data." />
@@ -184,10 +236,11 @@ export function SettingsView({ deleted, indexed, searchesLogged }: { deleted: Gu
         </Card>
 
         <Card title="Your data">
-          <Row title="Export everything" description="Guides, analyses, SOPs and templates as one Excel file, one sheet each. Items in the bin aren’t included.">
+          <Row title="Export everything" description="Guides, analyses, SOPs, templates and Knowledge hub articles as one Excel file, one sheet each. Items in the bin aren’t included.">
             <ExportEverything />
           </Row>
           <DeletedGuides guides={deleted} />
+          <DeletedArticles articles={deletedArticles} />
           <Row title="Backups" description="Supabase takes a daily backup of the database. The README explains how to restore it.">
             <span className="text-sm text-muted-foreground">Daily</span>
           </Row>

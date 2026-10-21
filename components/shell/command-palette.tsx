@@ -28,7 +28,9 @@ function isTyping(el: EventTarget | null) {
   return !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
 }
 
-export function CommandPalette({ open, onOpenChange, guides }: { open: boolean; onOpenChange: (open: boolean) => void; guides: PaletteGuide[] }) {
+export type PaletteArticle = { id: string; title: string; category: string };
+
+export function CommandPalette({ open, onOpenChange, guides, articles = [] }: { open: boolean; onOpenChange: (open: boolean) => void; guides: PaletteGuide[]; articles?: PaletteArticle[] }) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
 
@@ -99,6 +101,16 @@ export function CommandPalette({ open, onOpenChange, guides }: { open: boolean; 
             </CommandItem>
           ))}
         </CommandGroup>
+        {articles.length > 0 && (
+          <CommandGroup heading="Knowledge hub">
+            {articles.map((a) => (
+              <CommandItem key={a.id} value={`knowledge ${a.title} ${a.category}`} onSelect={() => go(`/knowledge/${a.id}`)}>
+                <span className="truncate">{a.title}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{a.category}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
       </CommandList>
       </Command>
     </CommandDialog>
