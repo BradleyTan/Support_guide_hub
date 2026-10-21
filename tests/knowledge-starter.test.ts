@@ -57,6 +57,14 @@ describe("starter articles", () => {
     if (a.category === "Tax") expect(a.whatItIs + a.example + a.tellCustomer).toMatch(/as of/i);
   });
 
+  it("makes no claim about desktop AutoCount without a desktop menu path to back it", () => {
+    // The readable sources are the Cloud help centre; desktop features are only described once the user adds a path.
+    for (const a of STARTER_ARTICLES.filter((x) => !x.desktopSteps)) {
+      const text = `${a.tellCustomer} ${a.whatItIs} ${a.example}`;
+      expect(text, a.slug).not.toMatch(/desktop AutoCount[^.]*(has|have|uses?|supports?)|some editions have/i);
+    }
+  });
+
   it("links only to starter articles that exist, and never to itself", () => {
     const slugs = new Set(STARTER_ARTICLES.map((a) => a.slug));
     for (const a of STARTER_ARTICLES) {

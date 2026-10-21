@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { articleInputSchema, hasNewerVersion, starterToRow, type ArticleInput } from "@/lib/knowledge/model";
+import { articleInputSchema, hasNewerVersion, starterToRow, stepsChanged, type ArticleInput } from "@/lib/knowledge/model";
 import { STARTER_ARTICLES } from "@/lib/knowledge/starter";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
 
@@ -97,9 +97,11 @@ export async function updateArticle(id: string, input: unknown): Promise<Result>
   if (!idSchema.safeParse(id).success) return { ok: false, error: GONE };
   const sb = await session();
   if (!sb) return { ok: false, error: SESSION_ENDED };
-  const { data: row } = await sb.from("knowledge_articles").select("starter_slug").eq("id", id).is("deleted_at", null).maybeSingle();
+  const { data: row } = await sb.from("knowledge_articles").select("starter_slug, desktop_steps, cloud_steps").eq("id", id).is("deleted_at", null).maybeSingle();
   if (!row) return { ok: false, error: GONE };
-  return update(id, { ...toColumns(p.data), edited: row.starter_slug !== null }, "Couldn’t save the article. Please try again.");
+  // A changed menu path hasn't been checked yet, so it shows "Needs verification" again.
+  const pathsChanged = stepsChanged({ desktopSteps: row.desktop_steps, cloudSteps: row.cloud_steps }, p.data);
+  return update(id, { ...toColumns(p.data), edited: row.starter_slug !== null, ...(pathsChanged ? { steps_verified: false } : {}) }, "Couldn’t save the article. Please try again.");
 }
 
 export async function setArticleReviewed(id: string, reviewed: boolean): Promise<Result> {

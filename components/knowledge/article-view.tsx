@@ -31,7 +31,7 @@ function Steps({ label, steps, verified }: { label: "Desktop" | "Cloud"; steps: 
         {label === "Desktop" ? "Desktop (AutoCount Accounting)" : "Cloud (AutoCount Cloud Accounting)"}
         {steps && !verified && <NeedsVerification />}
       </p>
-      {steps ? <p className="text-sm whitespace-pre-line">{steps}</p> : <p className="text-sm text-muted-foreground italic">{NOT_FOUND_STEPS}</p>}
+      {steps ? <p className="text-sm break-words whitespace-pre-line">{steps}</p> : <p className="text-sm text-muted-foreground italic">{NOT_FOUND_STEPS}</p>}
     </div>
   );
 }
@@ -82,7 +82,7 @@ export function ArticleView({ article: a, related, newerAvailable }: { article: 
           <span>· updated {formatDate(a.updatedAt)}</span>
           {a.starterSlug && <span>· starter article{a.edited ? ", edited by you" : ""}</span>}
         </div>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{a.title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight break-words sm:text-2xl">{a.title}</h1>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant={a.reviewed ? "outline" : "default"} disabled={busy} onClick={() => run(() => setArticleReviewed(a.id, !a.reviewed))}>
             <BadgeCheck /> {a.reviewed ? "Reviewed" : "Mark as reviewed"}
@@ -104,7 +104,7 @@ export function ArticleView({ article: a, related, newerAvailable }: { article: 
         )}
       </header>
 
-      <div className="flex max-w-[75ch] flex-col gap-7">
+      <div className="flex min-w-0 max-w-[75ch] flex-col gap-7">
         <section aria-labelledby="tell" className="rounded-xl border-2 border-primary/30 bg-primary/[0.04] p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 id="tell" className="font-medium">
@@ -122,17 +122,17 @@ export function ArticleView({ article: a, related, newerAvailable }: { article: 
               <Copy /> Copy
             </Button>
           </div>
-          <p className="text-[15px] leading-relaxed">{a.tellCustomer}</p>
+          <p className="text-[15px] leading-relaxed break-words">{a.tellCustomer}</p>
         </section>
 
         {a.whatItIs && (
           <Section title="What it is">
-            <p className="text-sm leading-relaxed whitespace-pre-line">{a.whatItIs}</p>
+            <p className="text-sm leading-relaxed break-words whitespace-pre-line">{a.whatItIs}</p>
           </Section>
         )}
         {a.example && (
           <Section title="Example">
-            <p className="rounded-lg bg-muted/60 p-3 text-sm leading-relaxed whitespace-pre-line">{a.example}</p>
+            <p className="rounded-lg bg-muted/60 p-3 text-sm leading-relaxed break-words whitespace-pre-line">{a.example}</p>
           </Section>
         )}
 
@@ -150,7 +150,7 @@ export function ArticleView({ article: a, related, newerAvailable }: { article: 
 
         {a.mistakes.length > 0 && (
           <Section title="Common mistakes">
-            <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
+            <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed break-words">
               {a.mistakes.map((m, i) => (
                 <li key={i}>{m}</li>
               ))}

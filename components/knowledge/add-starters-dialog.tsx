@@ -37,7 +37,8 @@ export function AddStartersDialog({ missing, variant = "outline" }: { missing: S
         size="sm"
         variant={variant}
         onClick={() => {
-          setChosen(missing.map((m) => m.slug));
+          // Nothing is pre-ticked: an article you deleted long ago must never come back without you choosing it.
+          setChosen([]);
           setOpen(true);
         }}
       >

@@ -51,7 +51,7 @@ export const SUPPLIERS: StarterArticle[] = [
     tellCustomer:
       "A supplier deposit is money you pay a supplier before they've sent the bill. It isn't an expense yet; it's money the supplier owes you in goods or services. When their bill arrives, the deposit is used to pay part of it.",
     whatItIs:
-      "Accounting-wise it's an asset (prepayment to the supplier) until the bill arrives, then it's applied against the purchase invoice so only the balance remains owing. Check how your AutoCount edition records it (some editions have a deposit feature, others use a payment and knock-off); this article has no sourced menu path yet.",
+      "Accounting-wise it's an asset (prepayment to the supplier) until the bill arrives, then it's applied against the purchase invoice so only the balance remains owing. No AutoCount source found yet for supplier deposits, so add the steps for Desktop and Cloud once you've checked how the client's edition records them.",
     example:
       "You pay a RM 1,000 deposit for machinery parts. Later the supplier bills RM 3,000 → apply the RM 1,000 deposit; you now owe RM 2,000.",
     desktopSteps: null,

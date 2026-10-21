@@ -291,9 +291,9 @@ export function SearchView({
               {knowledge.map((k) => (
                 <li key={k.id}>
                   <Link href={`/knowledge/${k.id}`} className="group block rounded-lg border bg-card p-3 transition-colors hover:border-primary/50">
-                    <span className="block text-sm font-medium group-hover:underline">{k.title}</span>
+                    <span className="block text-sm font-medium break-words group-hover:underline">{k.title}</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">{k.category}</span>
-                    <span className="mt-1 line-clamp-2 block text-sm text-muted-foreground">{k.tellCustomer}</span>
+                    <span className="mt-1 line-clamp-2 block text-sm break-words text-muted-foreground">{k.tellCustomer}</span>
                   </Link>
                 </li>
               ))}

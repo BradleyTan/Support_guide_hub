@@ -21,8 +21,11 @@ test.describe("read-only", () => {
     await open.click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: "Add starter articles" })).toBeVisible();
-    await dialog.getByRole("button", { name: "Select none" }).click();
+    // Nothing is ticked until the user ticks it (a deleted article must never come back pre-ticked).
+    await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(0);
     await expect(dialog.getByRole("button", { name: /^Add/ })).toBeDisabled();
+    await dialog.getByRole("button", { name: "Select all" }).click();
+    await expect(dialog.getByRole("button", { name: /^Add/ })).toBeEnabled();
     await page.keyboard.press("Escape");
   });
 
@@ -94,6 +97,18 @@ test.describe("saving (writes data)", () => {
     await page.getByRole("button", { name: "Save article" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment" })).toBeVisible();
     await expect(page.getByLabel("Desktop").getByText(NOT_FOUND)).toBeVisible();
+
+    // A long pasted link must wrap on a phone instead of making the page scroll sideways.
+    await page.getByRole("link", { name: "Edit" }).click();
+    await page.getByLabel("What it is").fill(`See https://example.com/${"averyveryverylongpath".repeat(12)} for details.`);
+    await page.getByRole("button", { name: "Save article" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment" })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment" })).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, "article page wider than a phone screen").toBeLessThanOrEqual(1);
+    await page.setViewportSize({ width: 1440, height: 900 });
 
     await page.getByRole("link", { name: "Edit" }).click();
     await page.getByLabel("Example").fill("Total RM 10.97 becomes RM 10.95.");

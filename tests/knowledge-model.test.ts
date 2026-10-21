@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { articleInputSchema, hasNewerVersion, missingStarters, rowToArticle, starterToRow, type StarterArticle } from "@/lib/knowledge/model";
+import { articleInputSchema, hasNewerVersion, missingStarters, rowToArticle, starterToRow, stepsChanged, type StarterArticle } from "@/lib/knowledge/model";
 
 function starter(slug: string, version = 1): StarterArticle {
   return {
@@ -118,5 +118,19 @@ describe("row mapping", () => {
   it("rowToArticle drops malformed sources instead of failing", () => {
     const row = { ...starterToRow(s), id: "x", updated_at: "2026-10-21T00:00:00Z", deleted_at: null, sources: [{ label: "ok", url: "https://a.b" }, "junk", { url: "https://c.d" }] };
     expect(rowToArticle(row).sources).toEqual([{ label: "ok", url: "https://a.b" }]);
+  });
+});
+
+describe("stepsChanged", () => {
+  const before = { desktopSteps: null, cloudSteps: "Accounting Menu > Reports > Debtor Aging" };
+
+  it("is true when a menu path is added, changed or removed, so it needs checking again", () => {
+    expect(stepsChanged(before, { ...before, desktopSteps: "A/R > Debtor Aging" })).toBe(true);
+    expect(stepsChanged(before, { ...before, cloudSteps: "Reports > Debtor Aging" })).toBe(true);
+    expect(stepsChanged(before, { ...before, cloudSteps: null })).toBe(true);
+  });
+
+  it("is false when only other text changes", () => {
+    expect(stepsChanged(before, { ...before })).toBe(false);
   });
 });

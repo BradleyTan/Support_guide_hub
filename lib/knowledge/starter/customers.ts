@@ -72,7 +72,7 @@ export const CUSTOMERS: StarterArticle[] = [
     tellCustomer:
       "A deposit is money the customer pays before you've issued the invoice. Until then it isn't a sale yet; you're holding the customer's money. When the invoice is issued, the deposit is used to pay part or all of it.",
     whatItIs:
-      "Accounting-wise a deposit is a liability (you owe the customer goods or a refund), not income. When the invoice is issued, the deposit is applied against it and only the balance remains owing. Desktop AutoCount Accounting has a deposit feature; AutoCount Cloud Accounting has no separate deposit document, so its help centre records the deposit as a receipt voucher and knocks it off against the invoice later. Check whether SST or e-Invoice rules require a document at the time of the deposit.",
+      "Accounting-wise a deposit is a liability (you owe the customer goods or a refund), not income. When the invoice is issued, the deposit is applied against it and only the balance remains owing. AutoCount Cloud Accounting has no separate deposit document, so its help centre records the deposit as a receipt voucher and knocks it off against the invoice later. For desktop AutoCount, add the steps once you've checked them. Check whether SST or e-Invoice rules require a document at the time of the deposit.",
     example:
       "1 March: customer pays a RM 2,000 deposit → recorded against the customer, not as sales.\n20 March: invoice RM 5,000 issued → apply the RM 2,000 deposit; the customer now owes RM 3,000.",
     desktopSteps: null,

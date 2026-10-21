@@ -159,3 +159,8 @@ export function rowToArticle(r: KnowledgeRow): KnowledgeArticle {
     deletedAt: r.deleted_at ?? undefined,
   };
 }
+
+/** True when a Desktop or Cloud menu path was added, changed or removed: the "checked" mark must then be cleared. */
+export function stepsChanged(prev: Pick<KnowledgeArticle, "desktopSteps" | "cloudSteps">, next: Pick<KnowledgeArticle, "desktopSteps" | "cloudSteps">) {
+  return (prev.desktopSteps ?? null) !== (next.desktopSteps ?? null) || (prev.cloudSteps ?? null) !== (next.cloudSteps ?? null);
+}

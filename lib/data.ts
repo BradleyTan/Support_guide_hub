@@ -242,3 +242,19 @@ export const getStarterSlugsInUse = cache(async (): Promise<string[]> => {
   if (error) throw new Error(`Couldn’t load the Knowledge hub: ${error.message}`);
   return data.flatMap((r) => (r.starter_slug ? [r.starter_slug] : []));
 });
+
+/**
+ * Article titles for the Ctrl K palette, loaded on every app page. Only the small columns, and an empty list if
+ * it fails, so a Knowledge hub problem can never stop the rest of the app from loading.
+ */
+export const getPaletteArticles = cache(async (): Promise<{ id: string; title: string; category: string }[]> => {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("knowledge_articles").select("id, title, category").is("deleted_at", null).order("title");
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.error("[palette] could not load Knowledge hub titles", e);
+    return [];
+  }
+});

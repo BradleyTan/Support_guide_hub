@@ -66,8 +66,8 @@ export function KnowledgeList({ articles, missing }: { articles: KnowledgeArticl
                     <li key={a.id}>
                       <Link href={`/knowledge/${a.id}`} className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/60">
                         <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium group-hover:underline">{a.title}</span>
-                          <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{a.tellCustomer}</span>
+                          <span className="block text-sm font-medium break-words group-hover:underline">{a.title}</span>
+                          <span className="mt-0.5 line-clamp-2 block text-xs break-words text-muted-foreground">{a.tellCustomer}</span>
                         </span>
                         <ReviewedBadge reviewed={a.reviewed} />
                       </Link>
