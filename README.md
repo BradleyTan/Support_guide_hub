@@ -6,6 +6,14 @@ Everything runs on free tiers and open-source libraries: no paid services, and n
 
 > **Status: Phase 7 (go-live).** All features are built. Hosting: Netlify free plan; follow [docs/GO-LIVE.md](docs/GO-LIVE.md) to deploy.
 
+## Knowledge hub (no AI)
+
+- A private library of plain-English accounting articles (Basics, Customers, Suppliers, Bank & cash, Stock, Reports, Tax, Period-end). Each article opens with **Tell the customer**, two or three sentences to say or paste to a client, then what it is, an RM example, **In AutoCount** (Desktop and Cloud, each marked **Needs verification** until you tick "I’ve checked these menu paths", or "Not found in a source yet — add it once checked"), common mistakes, related topics and sources.
+- **36 starter articles** live in `lib/knowledge/starter/` (reviewable in git). **Add starter articles** lists the ones you don't have; only the ticked ones are added. An article you deleted (in the bin or already removed) is never added back by itself. Starter articles start as "Not reviewed yet".
+- Desktop menu paths are empty in the starter set: the AutoCount wiki couldn't be read (503), so fill them in as you confirm them. Cloud paths come from the AutoCount Cloud help centre. Tax facts are dated "as of October 2026" and link to LHDN, Royal Malaysian Customs and the Ministry of Finance.
+- When a starter article is corrected in a later version, an article you haven't edited shows **Newer version available → Update**; edited articles are never changed.
+- Articles appear in **Search** (a Knowledge hub section), the **Ctrl K** palette, **Settings → Export everything** (sheet "Knowledge hub") and the 30-day bin (Settings → Deleted Knowledge hub articles).
+
 ## Replies, SOPs and templates (no AI)
 
 - **Reply generator:** choose a guide or analysis, a reply template (or the standard reply), the client’s name and the channel (Zoho Desk email or WhatsApp). Placeholders such as `{contact}`, `{title}`, `{cause}`, `{steps}`, `{prevention}`, and for analyses `{entries}` and `{treatment}`, are filled in; a line whose placeholders have nothing to fill is left out. WhatsApp puts headings in *bold*. Edit the draft, then copy it. English only. AutoCount menu paths from analyses are never put in a reply, because they aren’t confirmed.
@@ -75,7 +83,7 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables; 0011 Knowledge hub). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
 - Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`).
 - **Bin:** deleted items stay restorable for 30 days; every night at 03:45 Malaysia time the `purge-bin` job removes older ones for good (guides together with their files). The function only accepts calls carrying a secret kept in the database Vault, which only the scheduled job sends.
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.
