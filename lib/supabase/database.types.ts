@@ -167,6 +167,55 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["guides"]["Insert"]>;
         Relationships: [];
       };
+      knowledge_articles: {
+        Row: {
+          id: string;
+          user_id: string;
+          starter_slug: string | null;
+          starter_version: number | null;
+          edited: boolean;
+          title: string;
+          category: string;
+          tell_customer: string;
+          what_it_is: string;
+          example: string;
+          desktop_steps: string | null;
+          cloud_steps: string | null;
+          steps_verified: boolean;
+          mistakes: string[];
+          related: string[];
+          sources: Json;
+          reviewed: boolean;
+          fts: unknown;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          starter_slug?: string | null;
+          starter_version?: number | null;
+          edited?: boolean;
+          title: string;
+          category: string;
+          tell_customer: string;
+          what_it_is?: string;
+          example?: string;
+          desktop_steps?: string | null;
+          cloud_steps?: string | null;
+          steps_verified?: boolean;
+          mistakes?: string[];
+          related?: string[];
+          sources?: Json;
+          reviewed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["knowledge_articles"]["Insert"]>;
+        Relationships: [];
+      };
       official_pages: {
         Row: {
           url: string;
@@ -351,6 +400,10 @@ export type Database = {
         Returns: undefined;
       };
       normalize_query: { Args: { p: string }; Returns: string };
+      search_knowledge: {
+        Args: { p_query: string; p_limit?: number };
+        Returns: { id: string; score: number; matched_by: string[] }[];
+      };
       log_search: { Args: { p_query: string; p_guide_hits: number }; Returns: undefined };
       search_gaps: {
         Args: { p_days?: number; p_min_times?: number; p_limit?: number };
