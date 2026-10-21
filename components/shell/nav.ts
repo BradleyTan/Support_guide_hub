@@ -3,6 +3,7 @@ import {
   BookText,
   Calculator,
   FileStack,
+  GraduationCap,
   ChartColumn,
   LayoutDashboard,
   MessageSquareText,
@@ -35,6 +36,7 @@ export const navGroups: NavGroup[] = [
       { href: "/search", label: "Search", icon: Search, shortcut: "/" },
       { href: "/analyst", label: "Accounting analyst", short: "Analyst", icon: Calculator },
       { href: "/insights", label: "Insights", icon: ChartColumn, notOnPhoneTabs: true },
+      { href: "/knowledge", label: "Knowledge hub", short: "Knowledge", icon: GraduationCap, notOnPhoneTabs: true },
     ],
   },
   {

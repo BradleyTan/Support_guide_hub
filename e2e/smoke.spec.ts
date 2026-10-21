@@ -11,6 +11,7 @@ const routes: [string, RegExp][] = [
   ["/search?q=server%20not%20found", /Search/],
   ["/analyst", /Accounting analyst/],
   ["/insights", /Insights/],
+  ["/knowledge", /Knowledge hub/],
   ["/replies", /Reply generator/],
   ["/sop", /SOP builder/],
   ["/templates", /Templates/],
