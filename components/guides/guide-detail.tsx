@@ -13,7 +13,7 @@ import { AttachmentList } from "@/components/guides/attachments";
 import { deleteGuide, restoreGuide, setVerified } from "@/app/(app)/guides/actions";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate, formatDateTime } from "@/lib/format";
-import type { Guide } from "@/lib/types";
+import { PLATFORM_LABELS, type Guide } from "@/lib/types";
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -174,6 +174,8 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
           <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 rounded-lg border bg-card p-4">
             <dt className="text-muted-foreground">Product</dt>
             <dd>{shortProduct(g.product)}</dd>
+            <dt className="text-muted-foreground">Platform</dt>
+            <dd>{PLATFORM_LABELS[g.platform]}</dd>
             <dt className="text-muted-foreground">Versions</dt>
             <dd>{g.version || "—"}</dd>
             <dt className="text-muted-foreground">Module</dt>

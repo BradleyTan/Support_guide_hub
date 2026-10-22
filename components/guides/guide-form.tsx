@@ -18,11 +18,12 @@ import { splitLines, splitTags, type GuideInput } from "@/lib/guide-schema";
 import { shortProduct } from "@/lib/guide-utils";
 import { ACCEPTED_TYPES, MAX_FILES, validateFile } from "@/lib/files";
 import { uploadAttachment } from "@/lib/upload";
-import { CATEGORIES, PRODUCTS, type Attachment } from "@/lib/types";
+import { CATEGORIES, PLATFORM_LABELS, PLATFORMS, PRODUCTS, type Attachment } from "@/lib/types";
 
 interface FormState {
   title: string;
   product: string;
+  platform: string;
   version: string;
   module: string;
   category: string;
@@ -36,7 +37,7 @@ interface FormState {
 
 type Errors = Partial<Record<keyof FormState, string>>;
 
-const blank: FormState = { title: "", product: "", version: "", module: "", category: "", symptom: "", errorMessage: "", cause: "", steps: "", prevention: "", tags: "" };
+const blank: FormState = { title: "", product: "", platform: "desktop", version: "", module: "", category: "", symptom: "", errorMessage: "", cause: "", steps: "", prevention: "", tags: "" };
 
 function toFormState(g: GuideInput): FormState {
   return { ...g, category: g.category ?? "", steps: g.steps.join("\n"), tags: g.tags.join(", ") };
@@ -240,6 +241,9 @@ export function GuideForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Product" htmlFor="product" error={errors.product}>
             <PickSelect id="product" value={f.product} onChange={set("product")} placeholder="Choose product" invalid={!!errors.product} options={PRODUCTS.map((p) => ({ value: p, label: shortProduct(p) }))} />
+          </Field>
+          <Field label="Platform" htmlFor="platform" error={errors.platform} hint="Which AutoCount the steps are for">
+            <PickSelect id="platform" value={f.platform} onChange={set("platform")} placeholder="Choose platform" invalid={!!errors.platform} options={PLATFORMS.map((p) => ({ value: p, label: PLATFORM_LABELS[p] }))} />
           </Field>
           <Field label="Versions" htmlFor="version" error={errors.version} hint="e.g. 2.1, 2.2">
             <Input id="version" value={f.version} onChange={(e) => set("version")(e.target.value)} className="bg-card" maxLength={100} />

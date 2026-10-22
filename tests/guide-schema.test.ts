@@ -7,7 +7,7 @@ const valid = { title: "Invoice prints blank", product: "AutoCount Account Book"
 describe("guideInputSchema", () => {
   it("accepts a minimal guide and fills defaults", () => {
     const r = guideInputSchema.parse(valid);
-    expect(r).toMatchObject({ version: "", module: "", category: null, tags: [], errorMessage: "" });
+    expect(r).toMatchObject({ version: "", module: "", category: null, tags: [], errorMessage: "", platform: "desktop" });
   });
 
   it("requires a title, a product and at least one step", () => {
@@ -65,5 +65,16 @@ describe("describeChanges", () => {
   it("summarises many changes", () => {
     const s = describeChanges(before, { ...before, title: "a", symptom: "b", cause: "c", prevention: "d", tags: [] });
     expect(s).toMatch(/and \d more$/);
+  });
+});
+
+describe("guide platform", () => {
+  it("accepts desktop, cloud and both, and nothing else", () => {
+    for (const platform of ["desktop", "cloud", "both"]) expect(guideInputSchema.safeParse({ ...valid, platform }).success).toBe(true);
+    expect(guideInputSchema.safeParse({ ...valid, platform: "mobile" }).success).toBe(false);
+  });
+
+  it("is saved to the platform column", () => {
+    expect(inputToRow(guideInputSchema.parse({ ...valid, platform: "cloud" })).platform).toBe("cloud");
   });
 });

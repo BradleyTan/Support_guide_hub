@@ -11,6 +11,11 @@ export const PRODUCTS = [
 ] as const;
 export type Product = (typeof PRODUCTS)[number];
 
+/** Which AutoCount a guide is for; decides which menu paths it can confirm in the Accountant chat. */
+export const PLATFORMS = ["desktop", "cloud", "both"] as const;
+export type Platform = (typeof PLATFORMS)[number];
+export const PLATFORM_LABELS: Record<Platform, string> = { desktop: "Desktop", cloud: "Cloud", both: "Desktop & Cloud" };
+
 export const CATEGORIES = [
   "Installation & Database",
   "Bank & Cash",
@@ -43,6 +48,7 @@ export interface Guide {
   deletedAt?: string;
   title: string;
   product: Product;
+  platform: Platform;
   version: string; // versions it applies to, e.g. "2.1, 2.2"
   module: string;
   category: Category | null;

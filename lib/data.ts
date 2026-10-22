@@ -5,7 +5,7 @@ import type { Json, Tables } from "@/lib/supabase/database.types";
 import { parseSteps as parseSopSteps, type Sop, type SopImage } from "@/lib/sop";
 import { rowToArticle, type KnowledgeArticle, type KnowledgeRow } from "@/lib/knowledge/model";
 import { analysisResultSchema } from "@/lib/analysis-schema";
-import type { Analysis, Attachment, Category, Confidence, Guide, Product, Template, TemplateKind } from "@/lib/types";
+import type { Analysis, Attachment, Category, Confidence, Guide, Platform, Product, Template, TemplateKind } from "@/lib/types";
 import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
 
 /** Server-side reads. Every query runs as the signed-in user, so RLS limits results to their own rows. */
@@ -17,6 +17,7 @@ export function rowToGuide(r: Tables<"guides">, extra?: { attachments?: Attachme
     deletedAt: r.deleted_at ?? undefined,
     title: r.title,
     product: r.product as Product,
+    platform: r.platform as Platform,
     version: r.version,
     module: r.module,
     category: r.category as Category | null,
@@ -36,7 +37,7 @@ export function rowToGuide(r: Tables<"guides">, extra?: { attachments?: Attachme
 }
 
 const GUIDE_COLUMNS =
-  "id, user_id, code, title, product, version, module, category, symptom, error_message, cause, steps, prevention, tags, verified, uses, created_at, updated_at, deleted_at";
+  "id, user_id, code, title, product, platform, version, module, category, symptom, error_message, cause, steps, prevention, tags, verified, uses, created_at, updated_at, deleted_at";
 
 type GuideRow = Omit<Tables<"guides">, "embedding" | "fts">;
 const asRow = (r: GuideRow) => ({ ...r, embedding: null, fts: null }) as Tables<"guides">;

@@ -39,6 +39,7 @@ test("create, edit, verify, attach, delete and restore a guide", async ({ page }
 
   await page.getByLabel("Title").fill(`${RUN} Report template missing after upgrade`);
   await pick(page, "Product", "Accounting");
+  await pick(page, "Platform", "Cloud");
   await page.getByLabel("Module").fill("Printing");
   await page.getByLabel("Error message").fill("Report template not found");
   await page.getByLabel("Fix steps").fill("1. Export the template\n2. Import it again");
@@ -49,6 +50,7 @@ test("create, edit, verify, attach, delete and restore a guide", async ({ page }
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Report template missing after upgrade");
   await expect(page.getByText("Export the template")).toBeVisible();
   await expect(page.getByText("Guide created")).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: /^Cloud$/ })).toBeVisible();
 
   // Duplicate warning on a new guide with a near-identical title
   await page.goto("/guides/new");

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CATEGORIES, PRODUCTS, type Guide } from "@/lib/types";
+import { CATEGORIES, PLATFORMS, PRODUCTS, type Guide } from "@/lib/types";
 
 /** Splits a multi-line or comma list into trimmed, non-empty items. */
 export function splitLines(s: string) {
@@ -26,6 +26,7 @@ const text = (max: number) => z.string().trim().max(max, `Keep this under ${max}
 export const guideInputSchema = z.object({
   title: z.string().trim().min(1, "Give the guide a title so you can find it later.").max(300, "Keep the title under 300 characters."),
   product: z.enum(PRODUCTS, { error: "Choose the product this applies to." }),
+  platform: z.enum(PLATFORMS, { error: "Choose Desktop, Cloud or both." }).default("desktop"),
   version: text(100).default(""),
   module: text(100).default(""),
   category: z.enum(CATEGORIES).nullable().default(null),
@@ -44,6 +45,7 @@ export function inputToRow(g: GuideInput) {
   return {
     title: g.title,
     product: g.product,
+    platform: g.platform,
     version: g.version,
     module: g.module,
     category: g.category,
@@ -60,6 +62,7 @@ export function guideToInput(g: Guide): GuideInput {
   return {
     title: g.title,
     product: g.product,
+    platform: g.platform,
     version: g.version,
     module: g.module,
     category: g.category,
@@ -75,6 +78,7 @@ export function guideToInput(g: Guide): GuideInput {
 const FIELD_LABELS: Record<keyof GuideInput, string> = {
   title: "title",
   product: "product",
+  platform: "platform",
   version: "versions",
   module: "module",
   category: "category",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { autoMapColumns, normalizeCategory, normalizeProduct, parseSteps, reviewRows, splitHeader } from "@/lib/import";
+import { autoMapColumns, normalizeCategory, normalizePlatform, normalizeProduct, parseSteps, reviewRows, splitHeader } from "@/lib/import";
 import { closestMatch, titleSimilarity } from "@/lib/similarity";
 
 const existing = [{ code: "G-1051", title: "Workstations can't connect to SQL Server after a Windows update" }];
@@ -120,5 +120,33 @@ describe("splitHeader", () => {
 
   it("returns null when there's no heading row", () => {
     expect(splitHeader([["only one cell"], [1, 2]])).toBeNull();
+  });
+});
+
+describe("platform column", () => {
+  it("maps a Platform heading and reads Desktop / Cloud / Both in any case", () => {
+    expect(autoMapColumns(["Title", "Product", "Platform", "Solution"])).toEqual(["title", "product", "platform", "steps"]);
+    expect(normalizePlatform("Cloud")).toBe("cloud");
+    expect(normalizePlatform("DESKTOP")).toBe("desktop");
+    expect(normalizePlatform("both")).toBe("both");
+    expect(normalizePlatform("Desktop & Cloud")).toBe("both");
+    expect(normalizePlatform("")).toBeNull();
+  });
+
+  it("blank platform means desktop; an unknown one is a clear problem", () => {
+    const mapping = autoMapColumns(["Title", "Product", "Platform", "Solution"]);
+    const rows = reviewRows(
+      [
+        ["Blank platform", "AutoCount Accounting", "", "Do it"],
+        ["Cloud one", "AutoCount Accounting", "Cloud", "Do it"],
+        ["Odd one", "AutoCount Accounting", "Mobile", "Do it"],
+      ],
+      mapping,
+      { existing: [] },
+    );
+    expect(rows[0].input.platform).toBe("desktop");
+    expect(rows[1].input.platform).toBe("cloud");
+    expect(rows[2].status).toBe("error");
+    expect(rows[2].problems).toContain("Unknown platform “Mobile” (use Desktop, Cloud or Both)");
   });
 });

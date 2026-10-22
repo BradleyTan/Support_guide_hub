@@ -76,6 +76,7 @@ export async function updateGuide(code: string, input: unknown): Promise<ActionR
   const before: GuideInput = {
     title: guide.title,
     product: guide.product as GuideInput["product"],
+    platform: guide.platform as GuideInput["platform"],
     version: guide.version,
     module: guide.module,
     category: guide.category as GuideInput["category"],

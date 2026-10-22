@@ -13,10 +13,17 @@ describe("guides export", () => {
     const table = splitHeader(guidesSheet(guides).rows)!;
     const mapping = autoMapColumns(table.headers);
     // The extra columns (guide no., verified, opened, dates) aren't guide fields and are skipped.
-    expect(mapping.slice(11)).toEqual(["skip", "skip", "skip", "skip", "skip"]);
+    expect(mapping.slice(0, 3)).toEqual(["title", "product", "platform"]);
+    expect(mapping.slice(12)).toEqual(["skip", "skip", "skip", "skip", "skip"]);
     const back = reviewRows(table.rows, mapping, { existing: [] });
     expect(back.map((r) => r.status === "error" ? r.problems : "ok")).toEqual(guides.map(() => "ok"));
     back.forEach((r, i) => expect(r.input).toEqual(guideToInput(guides[i])));
+  });
+
+  it("has a Platform column right after Product", () => {
+    const rows = guidesSheet([{ ...guides[0], platform: "both" }]).rows;
+    expect(rows[0].slice(1, 3)).toEqual(["Product", "Platform"]);
+    expect(rows[1][2]).toBe("Desktop & Cloud");
   });
 
   it("has one row per guide plus the heading row", () => {

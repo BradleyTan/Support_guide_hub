@@ -1,16 +1,17 @@
 import { guideInputSchema, splitLines, splitTags, type GuideInput } from "@/lib/guide-schema";
 import { closestMatch, normalizeTitle } from "@/lib/similarity";
-import { CATEGORIES, PRODUCTS, type Category, type Product } from "@/lib/types";
+import { CATEGORIES, PLATFORMS, PLATFORM_LABELS, PRODUCTS, type Category, type Platform, type Product } from "@/lib/types";
 
 /** Pure helpers for the Excel/CSV import wizard (no browser or database access, so they're unit-testable). */
 
-export const IMPORT_FIELDS = ["title", "product", "version", "module", "category", "symptom", "errorMessage", "cause", "steps", "prevention", "tags"] as const;
+export const IMPORT_FIELDS = ["title", "product", "platform", "version", "module", "category", "symptom", "errorMessage", "cause", "steps", "prevention", "tags"] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 export type Mapping = (ImportField | "skip")[];
 
 export const FIELD_LABEL: Record<ImportField | "skip", string> = {
   title: "Title",
   product: "Product",
+  platform: "Platform",
   version: "Version",
   module: "Module",
   category: "Category",
@@ -27,6 +28,7 @@ export const FIELD_LABEL: Record<ImportField | "skip", string> = {
 const SYNONYMS: Record<ImportField, string[]> = {
   title: ["title", "issue", "subject", "problem", "summary", "case", "topic", "question"],
   product: ["product", "software", "system", "application", "app"],
+  platform: ["platform", "edition", "desktop or cloud"],
   version: ["version", "ver", "build", "release"],
   module: ["module", "area", "feature", "screen", "function"],
   category: ["category", "type", "group", "classification"],
@@ -72,6 +74,13 @@ export function normalizeProduct(value: string): Product | null {
   const exact = PRODUCTS.find((p) => p.toLowerCase() === v.toLowerCase());
   if (exact) return exact;
   return PRODUCT_ALIASES.find(([re]) => re.test(v))?.[1] ?? null;
+}
+
+/** "Desktop", "cloud", "Both", "Desktop & Cloud" → platform; blank → null. */
+export function normalizePlatform(value: string): Platform | null {
+  const v = value.trim().toLowerCase();
+  if (!v) return null;
+  return PLATFORMS.find((p) => p === v || PLATFORM_LABELS[p].toLowerCase() === v) ?? null;
 }
 
 export function normalizeCategory(value: string): Category | null {
@@ -120,12 +129,17 @@ export function reviewRows(
     const product = normalizeProduct(productText) ?? (productText ? null : (options.defaultProduct ?? null));
     if (!product) problems.push(productText ? `Unknown product “${productText}”` : "No product");
 
+    const platformText = get("platform");
+    const platform = platformText ? normalizePlatform(platformText) : "desktop";
+    if (!platform) problems.push(`Unknown platform “${platformText}” (use Desktop, Cloud or Both)`);
+
     const categoryText = get("category");
     const category = normalizeCategory(categoryText);
 
     const input: Partial<GuideInput> = {
       title: get("title"),
       product: product ?? undefined,
+      platform: platform ?? undefined,
       version: get("version"),
       module: get("module"),
       category,

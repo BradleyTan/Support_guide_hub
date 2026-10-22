@@ -1,4 +1,4 @@
-import type { Analysis, Guide, Template } from "@/lib/types";
+import { PLATFORM_LABELS, type Analysis, type Guide, type Template } from "@/lib/types";
 import type { Sop } from "@/lib/sop";
 import { NOT_FOUND_STEPS, type KnowledgeArticle } from "@/lib/knowledge/model";
 
@@ -12,7 +12,7 @@ export type Sheet = { name: string; rows: (string | number | boolean)[][] };
 const day = (iso: string) => iso.slice(0, 10);
 const numbered = (items: string[]) => items.map((s, i) => `${i + 1}. ${s}`).join("\n");
 
-export const GUIDE_HEADERS = ["Title", "Product", "Version", "Module", "Category", "Symptom", "Error message", "Cause", "Fix steps", "Prevention", "Tags", "Guide no.", "Verified", "Opened", "Created", "Updated"] as const;
+export const GUIDE_HEADERS = ["Title", "Product", "Platform", "Version", "Module", "Category", "Symptom", "Error message", "Cause", "Fix steps", "Prevention", "Tags", "Guide no.", "Verified", "Opened", "Created", "Updated"] as const;
 
 export function guidesSheet(guides: Guide[]): Sheet {
   return {
@@ -22,6 +22,7 @@ export function guidesSheet(guides: Guide[]): Sheet {
       ...guides.map((g) => [
         g.title,
         g.product,
+        PLATFORM_LABELS[g.platform],
         g.version,
         g.module,
         g.category ?? "",
