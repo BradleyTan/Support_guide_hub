@@ -20,7 +20,7 @@ test("the guide library exports the guides shown, in the import layout", async (
   const wb = await workbook((await download.path())!);
   expect(wb.SheetNames).toEqual(["Guides"]);
   const rows = XLSX.utils.sheet_to_json<string[]>(wb.Sheets.Guides, { header: 1 });
-  expect(rows[0].slice(0, 4)).toEqual(["Title", "Product", "Version", "Module"]);
+  expect(rows[0].slice(0, 5)).toEqual(["Title", "Product", "Platform", "Version", "Module"]);
   expect(rows.length).toBeGreaterThan(1);
 });
 
