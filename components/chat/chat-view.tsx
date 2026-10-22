@@ -27,6 +27,8 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
   const [error, setError] = useState<string | null>(null);
   // Turns answered in this visit but not yet in the server-rendered chat (shown while saving, or if saving failed).
   const [local, setLocal] = useState<ChatMessage[]>([]);
+  // The latest placeholder map, kept even when a save fails, so a follow-up never sends a name hidden earlier.
+  const [mask, setMask] = useState<MaskMap>(chat?.mask ?? {});
   const [renaming, setRenaming] = useState(false);
   const [title, setTitle] = useState(chat?.title ?? "");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -38,7 +40,7 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
     setBusy(true);
     setError(null);
     // Earlier turns are masked with the same map, so Groq sees the same placeholders throughout.
-    let m = map;
+    let m = { ...mask, ...map };
     const history = historyForGroq(messages).map((t) => {
       const r = autoMask(t.content, m);
       m = r.map;
@@ -50,6 +52,7 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
       setError(res.error);
       return;
     }
+    setMask(res.mask);
     const answer = unmaskAnswer(res.checked, res.mask);
     const now = new Date().toISOString();
     setLocal((l) => [
@@ -57,9 +60,10 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
       { id: `local-q-${now}`, role: "user", content: text, answer: null, checked: false, createdAt: now },
       { id: `local-a-${now}`, role: "assistant", content: "", answer, checked: false, createdAt: now },
     ]);
-    const saved = await saveTurn({ chatId: chat?.id ?? null, userText: text, answer, mask: res.mask });
+    const saved = await saveTurn({ chatId: chat?.id ?? null, userText: text, answer, mask: res.mask }).catch(() => ({ ok: false as const, error: "Couldn’t save the answer." }));
     setBusy(false);
     if (!saved.ok) {
+      setText("");
       toast.error(saved.error, { description: "The answer is shown here but wasn’t saved." });
       return;
     }
@@ -147,7 +151,7 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
               <AnswerView key={m.id} message={m} />
             ),
           )}
-          <Composer text={text} onText={setText} mask={chat?.mask ?? {}} busy={busy || working} error={error} onSend={send} />
+          <Composer text={text} onText={setText} mask={mask} busy={busy || working} error={error} onSend={send} />
           <p className="text-xs text-muted-foreground">
             {today} {today === 1 ? "answer" : "answers"} today · Groq’s free plan allows roughly 30–40 a day.
           </p>

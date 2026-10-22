@@ -91,6 +91,34 @@ test.describe("read-only", () => {
     await expect(page.getByLabel("Customer’s scenario")).toHaveValue("Customer short-paid RM10 because of bank charges.");
   });
 
+  test("if saving fails, a hidden name still stays hidden in the follow-up", async ({ page }) => {
+    const box = await preview(page, "Siti asked why RM10 was short on a RM1,000 invoice.");
+    await box.evaluate((el) => {
+      const node = el.firstChild!;
+      const start = node.textContent!.indexOf("Siti");
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, start + 4);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(range);
+    });
+    await page.getByRole("button", { name: "Hide selected text" }).click();
+    await expect(box).toContainText("[HIDDEN 1]");
+    const bodies = await stubAsk(page, (body) => ({ status: 200, json: { checked: okAnswer, mask: body.mask } }));
+    // Make the save (a server action posted to this page) fail, so nothing is written.
+    await page.route("**/chat", (route) => (route.request().method() === "POST" && route.request().headers()["next-action"] ? route.fulfill({ status: 500, body: "" }) : route.continue()));
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByText("wasn’t saved")).toBeVisible();
+    await expect(page.getByRole("article", { name: "Answer" })).toBeVisible();
+
+    await page.getByLabel("Customer’s scenario").fill("What should I tell Siti now?");
+    await page.getByRole("button", { name: "Preview what’s sent" }).click();
+    await expect(page.getByLabel("What Groq will receive")).toContainText("[HIDDEN 1]");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect.poll(() => bodies.length).toBe(2);
+    expect(JSON.stringify(bodies[1].history) + bodies[1].message).not.toContain("Siti");
+  });
+
   test("a missing Groq key is explained", async ({ page }) => {
     await preview(page, "Customer short-paid RM10.");
     await stubAsk(page, () => ({ status: 503, json: { error: "not_configured" } }));

@@ -16,6 +16,8 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
 const USER_AGENT = "SupportDeskIndexer/1.0 (personal support-notes tool; reads sitemap and articles only)";
 const PLACEHOLDER_KEY = /^\[(COMPANY|IC|BANK|PHONE|EMAIL|HIDDEN) \d+\]$/;
+// The chat's placeholder map grows with every name and number in the scenario and its sources.
+const MAX_MASK_ENTRIES = 1000;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -41,7 +43,7 @@ function readBody(body: unknown): { message: string; history: Turn[]; mask: Mask
   }
   const mask = b.mask && typeof b.mask === "object" && !Array.isArray(b.mask) ? (b.mask as Record<string, unknown>) : {};
   const entries = Object.entries(mask);
-  if (entries.length > 200 || entries.some(([k, v]) => !PLACEHOLDER_KEY.test(k) || typeof v !== "string" || v.length > 300)) return null;
+  if (entries.length > MAX_MASK_ENTRIES || entries.some(([k, v]) => !PLACEHOLDER_KEY.test(k) || typeof v !== "string" || v.length > 300)) return null;
   return { message: b.message, history: (history as Turn[]).slice(-6), mask: mask as MaskMap };
 }
 
@@ -152,7 +154,10 @@ Deno.serve(async (req: Request) => {
 
   let input: ReturnType<typeof readBody>;
   try {
-    input = readBody(await req.json());
+    const body = await req.json();
+    const mask = body?.mask;
+    if (mask && typeof mask === "object" && Object.keys(mask).length > MAX_MASK_ENTRIES) return json({ error: "mask_too_large" }, 400);
+    input = readBody(body);
   } catch {
     input = null;
   }

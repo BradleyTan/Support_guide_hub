@@ -50,6 +50,13 @@ describe("hideSelection", () => {
     expect(Object.keys(again.map)).toHaveLength(1);
   });
 
+  it("hiding text that already contains a placeholder still unmasks fully", () => {
+    const first = hideSelection("Ali and his wife Siti paid", "Ali", {});
+    const second = hideSelection(first.text, "[HIDDEN 1] and his wife Siti", first.map);
+    expect(second.text).toBe("[HIDDEN 2] paid");
+    expect(unmask(second.text, second.map)).toBe("Ali and his wife Siti paid");
+  });
+
   it("ignores blank or placeholder-only selections", () => {
     const masked = autoMask("ABC Sdn Bhd", {});
     expect(hideSelection(masked.text, "  ", masked.map).text).toBe("[COMPANY 1]");

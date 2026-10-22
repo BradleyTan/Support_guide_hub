@@ -17,6 +17,7 @@ const STATUS: Record<CheckedStep["status"], { label: string; className: string }
   confirmed: { label: "Confirmed", className: "border-success/30 bg-success/10 text-success" },
   "unverified-source": { label: "From an unverified guide — check it", className: "border-warning/40 bg-warning/10 text-foreground" },
   "not-confirmed": { label: "Not confirmed", className: "border-destructive/30 bg-destructive/10 text-destructive" },
+  "no-path": { label: "No menu path", className: "border-border text-muted-foreground" },
 };
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {

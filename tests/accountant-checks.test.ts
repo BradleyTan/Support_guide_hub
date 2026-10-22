@@ -40,7 +40,7 @@ describe("checkEntry", () => {
 describe("checkStep", () => {
   it("path matching ignores case, spacing and arrows", () => {
     expect(normalizePath("Sales  →  Invoice")).toBe(normalizePath("sales > invoice"));
-    expect(checkStep(step({ menuPath: "Sales → Invoice" }), [src({ text: "First go to sales > invoice and click New." })]).status).toBe("confirmed");
+    expect(checkStep(step({ menuPath: "Sales → Invoice" }), [src({ text: "First go to sales > invoice, then click New." })]).status).toBe("confirmed");
   });
 
   it("cloud source never confirms a desktop path", () => {
@@ -65,8 +65,21 @@ describe("checkStep", () => {
     expect(checkStep(step({ sourceIds: ["S2"] }), [src({ text: "Sales > Invoice" })]).status).toBe("not-confirmed");
   });
 
-  it("a step without a menu path is confirmed", () => {
-    expect(checkStep(step({ menuPath: null, sourceIds: [] }), []).status).toBe("confirmed");
+  it("a step without a menu path is not called confirmed", () => {
+    expect(checkStep(step({ menuPath: null, sourceIds: [] }), []).status).toBe("no-path");
+  });
+
+  it("a path that is only the start of a longer menu is not confirmed", () => {
+    expect(checkStep(step({ menuPath: "Sales > Invoice" }), [src({ text: "Go to Sales > Invoice Listing." })]).status).toBe("not-confirmed");
+    expect(checkStep(step({ menuPath: "Sales > Invoice" }), [src({ text: "Go to Sales > Invoice." })]).status).toBe("confirmed");
+  });
+
+  it("a one-word path is never confirmed", () => {
+    expect(checkStep(step({ menuPath: "Sales" }), [src({ text: "Sales" })]).status).toBe("not-confirmed");
+  });
+
+  it("a path is not matched inside a longer word", () => {
+    expect(checkStep(step({ menuPath: "Sales > Invoice" }), [src({ text: "Presales > Invoice." })]).status).toBe("not-confirmed");
   });
 });
 
@@ -85,6 +98,31 @@ describe("buildCustomerReply", () => {
     expect(reply).toContain("I'll confirm the exact menu and get back to you.");
     expect(reply).toContain("AutoCount Cloud:");
     expect(reply).toContain("AutoCount (Desktop):");
+  });
+
+  it("a path written in the step text never reaches the customer unchecked", () => {
+    const a = fixture();
+    const steps = [{ platform: "desktop" as const, text: "Open A/R > Made Up Screen > Knock Off and save.", menuPath: null, sourceIds: [], status: "no-path" as const }];
+    const { reply } = buildCustomerReply(a, steps, [{ balanced: true }], map);
+    expect(reply).not.toContain("Made Up Screen");
+    expect(reply).toContain("I'll confirm the exact menu and get back to you.");
+  });
+
+  it("a confirmed step keeps only its checked path, not other paths in its text", () => {
+    const a = fixture();
+    const steps = [{ platform: "desktop" as const, text: "Use Sales > Cloud Only Screen first.", menuPath: "A/R > A/R Payment", sourceIds: ["S1"], status: "confirmed" as const }];
+    const { reply } = buildCustomerReply(a, steps, [{ balanced: true }], map);
+    expect(reply).not.toContain("Cloud Only Screen");
+    expect(reply).toContain("A/R > A/R Payment");
+  });
+
+  it("paths with any separator are kept out of the customer reply", () => {
+    for (const path of ["Sales -> Fake Menu", "Sales » Fake Menu", "Sales › Fake Menu", "Sales>Fake Menu", "Sales → Fake Menu"]) {
+      const a = { ...fixture(), customerMessage: `We'll sort it out. Open ${path} to check.` };
+      const steps = [{ platform: "cloud" as const, text: `Open ${path}.`, menuPath: null, sourceIds: [], status: "no-path" as const }];
+      const { reply } = buildCustomerReply(a, steps, [{ balanced: true }], map);
+      expect(reply, path).not.toContain("Fake Menu");
+    }
   });
 
   it("customer reply omits unbalanced entries", () => {

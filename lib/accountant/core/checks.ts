@@ -6,9 +6,11 @@ import { PLACEHOLDER, type MaskMap } from "./mask.ts";
 export const NOT_CONFIRMED_SENTENCE = "I'll confirm the exact menu and get back to you.";
 export const UNBALANCED_LABEL = "Didn't balance — not sent to the customer";
 const UNKNOWN_PLACEHOLDERS = "Customer reply had unknown placeholders";
-const PATH_IN_TEXT = /\w[\w/ ]*\s(>|→)\s\w/;
+/** Any menu-like separator between two words, the same set normalizePath understands (spaced or not). */
+const PATH_IN_TEXT = /\S\s*(?:→|»|›|->|>)\s*\S/;
 
 const toSen = (n: number) => Math.round(n * 100);
+const sentences = (s: string) => s.split(/(?<=[.!?])\s+/).filter((x) => x.trim());
 
 export function formatRM(sen: number): string {
   const [whole, cents] = (Math.abs(sen) / 100).toFixed(2).split(".");
@@ -42,16 +44,44 @@ export function normalizePath(p: string): string {
 
 const fitsPlatform = (s: Source, step: ModelStep) => s.platform === "both" || s.platform === step.platform;
 
+/**
+ * True when the source states this exact menu path: at least two levels, matched as whole levels on one line
+ * ("Sales > Invoice" is not confirmed by "Sales > Invoice Listing" or "Presales > Invoice").
+ */
+export function sourceStatesPath(sourceText: string, menuPath: string): boolean {
+  const want = normalizePath(menuPath).split(" > ");
+  if (want.length < 2 || want.some((w) => !w)) return false;
+  const first = want[0];
+  const last = want[want.length - 1];
+  for (const line of sourceText.split("\n")) {
+    const segs = normalizePath(line).split(" > ");
+    for (let i = 0; i + want.length <= segs.length; i++) {
+      const head = segs[i];
+      const tail = segs[i + want.length - 1];
+      const headOk = head === first || (head.endsWith(first) && /[^a-z0-9]$/.test(head.slice(0, head.length - first.length)));
+      const middleOk = want.slice(1, -1).every((w, k) => segs[i + 1 + k] === w);
+      const tailOk = tail === last || (tail.startsWith(last) && /^[.,;:)"'!?]/.test(tail.slice(last.length)));
+      if (headOk && middleOk && tailOk) return true;
+    }
+  }
+  return false;
+}
+
+/** The text without any sentence that contains a menu path. */
+export function withoutPaths(text: string): string {
+  return sentences(text)
+    .filter((x) => !PATH_IN_TEXT.test(x))
+    .join(" ");
+}
+
 export function checkStep(step: ModelStep, sources: Source[]): CheckedStep {
-  if (!step.menuPath) return { ...step, status: "confirmed" };
-  const path = normalizePath(step.menuPath);
-  const backing = sources.filter((s) => step.sourceIds.includes(s.id) && s.kind !== "web" && fitsPlatform(s, step) && normalizePath(s.text).includes(path));
+  if (!step.menuPath) return { ...step, status: "no-path" };
+  const menuPath = step.menuPath;
+  const backing = sources.filter((s) => step.sourceIds.includes(s.id) && s.kind !== "web" && fitsPlatform(s, step) && sourceStatesPath(s.text, menuPath));
   if (backing.some((s) => s.checked)) return { ...step, status: "confirmed" };
   if (backing.length) return { ...step, status: "unverified-source" };
   return { ...step, status: "not-confirmed" };
 }
-
-const sentences = (s: string) => s.split(/(?<=[.!?])\s+/).filter((x) => x.trim());
 
 export function buildCustomerReply(a: ModelAnswer, steps: CheckedStep[], entries: { balanced: boolean }[], map: MaskMap): { reply: string | null; flags: string[] } {
   if (a.needsMoreInfo) return { reply: null, flags: [] };
@@ -74,9 +104,10 @@ export function buildCustomerReply(a: ModelAnswer, steps: CheckedStep[], entries
     const group = steps.filter((s) => s.platform === platform);
     if (!group.length) continue;
     const lines = group.map((s, i) => {
-      const ok = s.status === "confirmed";
-      const text = ok ? s.text : sentences(s.text).filter((x) => !PATH_IN_TEXT.test(x)).join(" ");
-      const path = s.menuPath ? (ok ? ` — ${s.menuPath}` : ` ${NOT_CONFIRMED_SENTENCE}`) : "";
+      // Paths in the step's own text are never trusted; only a checked menuPath is added back.
+      const text = withoutPaths(s.text);
+      const hadPathInText = text !== sentences(s.text).join(" ");
+      const path = s.status === "confirmed" && s.menuPath ? ` — ${s.menuPath}` : s.menuPath || hadPathInText ? ` ${NOT_CONFIRMED_SENTENCE}` : "";
       return `${i + 1}. ${text}${path}`.trim();
     });
     parts.push([heading, ...lines].join("\n"));

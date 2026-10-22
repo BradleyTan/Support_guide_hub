@@ -112,7 +112,8 @@ export function parseAnswer(raw: string): { ok: true; answer: ModelAnswer } | { 
 }
 
 export interface CheckedStep extends ModelStep {
-  status: "confirmed" | "unverified-source" | "not-confirmed";
+  /** no-path: the step names no menu path, so there was nothing to check. */
+  status: "confirmed" | "unverified-source" | "not-confirmed" | "no-path";
 }
 
 export interface CheckedAnswer {

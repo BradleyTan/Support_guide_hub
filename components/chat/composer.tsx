@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { EyeOff, Loader2, ScanEye, Send } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +40,8 @@ export function Composer({
     const sel = window.getSelection();
     const picked = sel?.toString().trim() ?? "";
     if (!picked || !previewRef.current?.contains(sel?.anchorNode ?? null)) return;
+    // Hide names and short details, not whole paragraphs (each hidden item must stay under 200 characters).
+    if (picked.length > 200) return void toast.error("Select a shorter piece of text to hide, such as a name.");
     setHidden((h) => (h.includes(picked) ? h : [...h, picked]));
     sel?.removeAllRanges();
   }

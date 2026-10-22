@@ -26,6 +26,12 @@ function checked(over: Partial<CheckedAnswer> = {}): CheckedAnswer {
 describe("answerToGuideInput", () => {
   const scenario = "Customer paid RM990 for a RM1,000 invoice; the bank took RM10.";
 
+  it("a step whose path was never checked keeps its text but not the path", () => {
+    const steps = [{ platform: "desktop" as const, text: "Open A/R > Made Up Screen and knock off the invoice.", menuPath: null, sourceIds: [], status: "no-path" as const }];
+    const g = answerToGuideInput(checked({ steps }), "x");
+    expect(g.steps!.join(" ")).not.toContain("Made Up Screen");
+  });
+
   it("only confirmed steps become guide steps", () => {
     const g = answerToGuideInput(checked(), scenario);
     expect(g.steps).toEqual(["Create a receipt for RM990 and knock off the invoice. (Sales > Receive Payment)"]);
@@ -94,6 +100,7 @@ describe("askErrorMessage", () => {
     expect(askErrorMessage(502, { error: "bad_answer" })).toMatch(/try again/i);
     expect(askErrorMessage(401, {})).toMatch(/sign in/i);
     expect(askErrorMessage(500, "x")).toMatch(/try again/i);
+    expect(askErrorMessage(400, { error: "mask_too_large" })).toMatch(/new chat/i);
   });
 });
 

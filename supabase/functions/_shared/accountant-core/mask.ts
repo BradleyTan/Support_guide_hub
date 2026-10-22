@@ -47,7 +47,8 @@ export function hideSelection(text: string, value: string, map: MaskMap): { text
   const v = value.trim();
   if (!v || !text.includes(v) || v.replace(PLACEHOLDER, "").trim() === "") return { text, map };
   const next = { ...map };
-  const p = placeholderFor("HIDDEN", v, next);
+  // Store the real text: a selection may already contain placeholders, and unmask makes a single pass.
+  const p = placeholderFor("HIDDEN", unmask(v, next), next);
   return { text: text.split(v).join(p), map: next };
 }
 

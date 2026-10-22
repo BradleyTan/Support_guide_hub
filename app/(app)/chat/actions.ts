@@ -11,7 +11,7 @@ import type { Json } from "@/lib/supabase/database.types";
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
 const idSchema = z.uuid();
-const maskSchema = z.record(z.string().regex(/^\[(COMPANY|IC|BANK|PHONE|EMAIL|HIDDEN) \d+\]$/), z.string().max(300)).refine((m) => Object.keys(m).length <= 200);
+const maskSchema = z.record(z.string().regex(/^\[(COMPANY|IC|BANK|PHONE|EMAIL|HIDDEN) \d+\]$/), z.string().max(300)).refine((m) => Object.keys(m).length <= 1000);
 const SESSION_ENDED = "Your session has ended. Please sign in again.";
 const GONE = "This chat no longer exists.";
 
@@ -37,6 +37,7 @@ export async function saveTurn(input: { chatId: string | null; userText: string;
   if (!sb) return { ok: false, error: SESSION_ENDED };
 
   let chatId = input.chatId;
+  const isNew = !chatId;
   if (chatId) {
     const { data, error } = await sb.from("accountant_chats").update({ mask_map: mask.data }).eq("id", chatId).is("deleted_at", null).select("id").maybeSingle();
     if (error) return { ok: false, error: "Couldn’t save the answer. Please try again." };
@@ -47,13 +48,22 @@ export async function saveTurn(input: { chatId: string | null; userText: string;
     chatId = data.id;
   }
 
-  // Two inserts so the question is always stored (and listed) before its answer.
-  const { error: qError } = await sb.from("accountant_messages").insert({ chat_id: chatId, role: "user", content: text.data });
-  if (qError) return { ok: false, error: "Couldn’t save the answer. Please try again." };
-  const { data: saved, error: aError } = await sb.from("accountant_messages").insert({ chat_id: chatId, role: "assistant", answer: answer as unknown as Json }).select("id").single();
-  if (aError || !saved) return { ok: false, error: "Couldn’t save the answer. Please try again." };
+  // Question and answer in one insert, so a turn is saved whole or not at all (getChat lists the question first).
+  const { data: saved, error } = await sb
+    .from("accountant_messages")
+    .insert([
+      { chat_id: chatId, role: "user", content: text.data },
+      { chat_id: chatId, role: "assistant", answer: answer as unknown as Json },
+    ])
+    .select("id, role");
+  const answerRow = saved?.find((m) => m.role === "assistant");
+  if (error || !answerRow) {
+    // A chat created just now for this turn would otherwise be left empty.
+    if (isNew) await sb.from("accountant_chats").delete().eq("id", chatId);
+    return { ok: false, error: "Couldn’t save the answer. Please try again." };
+  }
   refresh(chatId);
-  return { ok: true, data: { chatId, assistantMessageId: saved.id } };
+  return { ok: true, data: { chatId, assistantMessageId: answerRow.id } };
 }
 
 /** The "I've checked the entry and steps" tick that unlocks Copy for the customer. */

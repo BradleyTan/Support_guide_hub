@@ -1,5 +1,5 @@
 import type { CheckedAnswer } from "@/lib/accountant/core/answer";
-import { formatRM } from "@/lib/accountant/core/checks";
+import { formatRM, withoutPaths } from "@/lib/accountant/core/checks";
 import type { GuideInput } from "@/lib/guide-schema";
 import type { Platform } from "@/lib/types";
 
@@ -16,9 +16,15 @@ export function answerToGuideInput(checked: CheckedAnswer, scenario: string): Pa
     .filter((_, i) => checked.entryResults[i]?.balanced)
     .map((e) => `Journal: ${e.lines.map((l) => (l.dr !== null ? `Dr ${l.account} ${formatRM(Math.round(l.dr * 100))}` : `Cr ${l.account} ${formatRM(Math.round((l.cr ?? 0) * 100))}`)).join(" / ")}`);
 
-  const confirmed = checked.steps.filter((s) => s.status === "confirmed");
-  const steps = confirmed.map((s) => (s.menuPath ? `${s.text} (${s.menuPath})` : s.text).slice(0, 2000));
-  const platforms = new Set(confirmed.map((s) => s.platform));
+  // Confirmed paths, and steps that never named one. Paths inside step text are never copied: they weren't checked.
+  const kept = checked.steps.filter((s) => s.status === "confirmed" || s.status === "no-path");
+  const steps = kept
+    .map((s) => {
+      const text = withoutPaths(s.text);
+      return (s.status === "confirmed" && s.menuPath ? `${text} (${s.menuPath})` : text).trim().slice(0, 2000);
+    })
+    .filter(Boolean);
+  const platforms = new Set(kept.map((s) => s.platform));
   const platform: Platform = platforms.size === 2 ? "both" : platforms.has("cloud") ? "cloud" : "desktop";
 
   return {
