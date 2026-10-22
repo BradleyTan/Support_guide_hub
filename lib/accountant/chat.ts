@@ -1,4 +1,5 @@
 import { modelAnswerSchema, type CheckedAnswer } from "@/lib/accountant/core/answer";
+import { unmask, type MaskMap } from "@/lib/accountant/core/mask";
 
 /** Pure helpers for saved Accountant chats (no browser or database access, so they're unit-testable). */
 
@@ -38,4 +39,20 @@ export function historyForGroq(messages: ChatMessage[]): ChatTurn[] {
     const parts = a.needsMoreInfo ? ["I asked:", ...a.questions.map((q) => `- ${q}`)] : [a.summary, m.answer.customerReply ?? ""];
     return { role: "assistant", content: parts.filter(Boolean).join("\n").slice(0, 4000) };
   });
+}
+
+/** Swaps placeholders back to real names in every text of an answer (the browser does this; Groq never sees them). */
+export function unmaskAnswer(checked: CheckedAnswer, map: MaskMap): CheckedAnswer {
+  return JSON.parse(JSON.stringify(checked), (_key, value) => (typeof value === "string" ? unmask(value, map) : value));
+}
+
+/** What to tell the user when ask-accountant fails. Their typed message always stays in the box. */
+export function askErrorMessage(status: number, body: unknown): string {
+  const b = (body && typeof body === "object" ? body : {}) as { error?: string; retryAfter?: number };
+  if (status === 429) return `Groq's free limit is busy — try again in ${Math.max(1, Math.round(Number(b.retryAfter) || 60))} seconds`;
+  if (status === 401) return "Your session has ended. Please sign in again.";
+  if (status === 503 || b.error === "not_configured") return "The Groq key isn't set up yet. Add GROQ_API_KEY under Supabase → Edge Functions → Secrets (see docs/GO-LIVE.md).";
+  if (b.error === "bad_answer") return "The answer came back in a form that couldn't be checked. Please try again.";
+  if (status === 400) return "Write the scenario in up to 4,000 characters.";
+  return "Couldn't get an answer just now. Please try again.";
 }

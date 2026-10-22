@@ -7,6 +7,7 @@ import {
   ChartColumn,
   LayoutDashboard,
   MessageSquareText,
+  MessagesSquare,
   Search,
   Settings,
   type LucideIcon,
@@ -37,6 +38,7 @@ export const navGroups: NavGroup[] = [
       { href: "/analyst", label: "Accounting analyst", short: "Analyst", icon: Calculator },
       { href: "/insights", label: "Insights", icon: ChartColumn, notOnPhoneTabs: true },
       { href: "/knowledge", label: "Knowledge hub", short: "Knowledge", icon: GraduationCap, notOnPhoneTabs: true },
+      { href: "/chat", label: "Accountant chat", short: "Chat", icon: MessagesSquare, notOnPhoneTabs: true },
     ],
   },
   {

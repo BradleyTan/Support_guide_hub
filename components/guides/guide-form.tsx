@@ -43,6 +43,16 @@ function toFormState(g: GuideInput): FormState {
   return { ...g, category: g.category ?? "", steps: g.steps.join("\n"), tags: g.tags.join(", ") };
 }
 
+function fromPrefill(p: Partial<GuideInput>): FormState {
+  return {
+    ...blank,
+    ...Object.fromEntries(Object.entries(p).filter(([, v]) => typeof v === "string")),
+    category: p.category ?? "",
+    steps: (p.steps ?? []).join("\n"),
+    tags: (p.tags ?? []).join(", "),
+  };
+}
+
 function toInput(f: FormState) {
   return {
     ...f,
@@ -145,7 +155,7 @@ export function GuideForm({
   code,
   guideDbId,
   initial,
-  prefillTitle,
+  prefill,
   attachments = [],
 }: {
   mode: "create" | "edit";
@@ -153,12 +163,12 @@ export function GuideForm({
   code?: string;
   guideDbId?: string;
   initial?: GuideInput;
-  /** New guide only: e.g. a search with no matching guide, from Insights. */
-  prefillTitle?: string;
+  /** New guide only: a search with no matching guide (Insights), or an Accountant chat answer. */
+  prefill?: Partial<GuideInput>;
   attachments?: Attachment[];
 }) {
   const router = useRouter();
-  const [f, setF] = useState<FormState>(initial ? toFormState(initial) : { ...blank, title: prefillTitle ?? "" });
+  const [f, setF] = useState<FormState>(initial ? toFormState(initial) : prefill ? fromPrefill(prefill) : blank);
   const [errors, setErrors] = useState<Errors>({});
   const [files, setFiles] = useState<File[]>([]);
   const [similar, setSimilar] = useState<{ code: string; title: string }[]>([]);

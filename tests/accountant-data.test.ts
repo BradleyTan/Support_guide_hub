@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CheckedAnswer, ModelAnswer } from "@/lib/accountant/core/answer";
-import { chatTitle, historyForGroq, rowToMessage, type ChatMessage } from "@/lib/accountant/chat";
+import { askErrorMessage, chatTitle, historyForGroq, rowToMessage, unmaskAnswer, type ChatMessage } from "@/lib/accountant/chat";
 import { answerToGuideInput } from "@/lib/accountant/to-guide";
 import { guideInputSchema } from "@/lib/guide-schema";
 
@@ -80,5 +80,29 @@ describe("chat helpers", () => {
     expect(h[0]).toEqual({ role: "user", content: "question 2" });
     expect(h[1].role).toBe("assistant");
     expect(h[1].content).toContain(answer().summary);
+  });
+});
+
+describe("askErrorMessage", () => {
+  it("gives the fixed rate-limit wording with the wait time", () => {
+    expect(askErrorMessage(429, { error: "rate_limited", retryAfter: 42 })).toBe("Groq's free limit is busy — try again in 42 seconds");
+    expect(askErrorMessage(429, null)).toBe("Groq's free limit is busy — try again in 60 seconds");
+  });
+
+  it("explains a missing key, a garbled answer, signing in and anything else", () => {
+    expect(askErrorMessage(503, { error: "not_configured" })).toMatch(/GROQ_API_KEY/);
+    expect(askErrorMessage(502, { error: "bad_answer" })).toMatch(/try again/i);
+    expect(askErrorMessage(401, {})).toMatch(/sign in/i);
+    expect(askErrorMessage(500, "x")).toMatch(/try again/i);
+  });
+});
+
+describe("unmaskAnswer", () => {
+  it("puts real names back everywhere, including values with quotes", () => {
+    const map = { "[COMPANY 1]": 'Lee "Best" Trading Sdn Bhd' };
+    const out = unmaskAnswer(checked({ customerReply: "Hi [COMPANY 1]" }), map);
+    expect(out.customerReply).toBe('Hi Lee "Best" Trading Sdn Bhd');
+    expect(out.answer.entries[0].lines[2].account).toBe('Trade debtor - Lee "Best" Trading Sdn Bhd');
+    expect(out.entryResults).toEqual([{ balanced: true, problem: null }]);
   });
 });
