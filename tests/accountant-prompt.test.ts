@@ -5,15 +5,15 @@ import { buildMessages, SYSTEM_PROMPT } from "@/lib/accountant/core/prompt";
 const source = (id: string, text: string): Source => ({ id, kind: "my-guide", title: `Guide ${id}`, url: "https://x.test", platform: "desktop", checked: true, text });
 
 describe("buildMessages", () => {
-  it("caps total source text at 12,000 chars and numbers sources S1..", () => {
+  it("caps total source text at 9,000 chars and numbers sources S1..", () => {
     const sources = [source("a", "x".repeat(5000)), source("b", "y".repeat(5000)), source("c", "z".repeat(5000)), source("d", "w".repeat(5000))];
     const { messages, sources: out } = buildMessages({ history: [], message: "Hi", sources, map: {} });
     expect(out.map((s) => s.id)).toEqual(["S1", "S2", "S3", "S4"].slice(0, out.length));
     const all = messages.map((m) => m.content).join("\n");
     expect(all).toContain("[S1]");
     const total = out.reduce((n, s) => n + s.text.length, 0);
-    expect(total).toBeLessThanOrEqual(12_000);
-    expect(out[0].text.length).toBeLessThanOrEqual(3_000);
+    expect(total).toBeLessThanOrEqual(9_000);
+    expect(out[0].text.length).toBeLessThanOrEqual(2_500);
   });
 
   it("never includes an unmasked value", () => {

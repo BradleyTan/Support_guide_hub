@@ -181,11 +181,21 @@ Deno.serve(async (req: Request) => {
       messages: built.messages,
       response_format: { type: "json_schema", json_schema: { name: "answer", strict: true, schema: modelAnswerJsonSchema } },
       reasoning_effort: "medium",
-      max_completion_tokens: 2500,
+      max_completion_tokens: 2000,
       temperature: 0.2,
     };
-    let parsed = parseAnswer(await groq(key, request));
-    if (!parsed.ok) parsed = parseAnswer(await groq(key, request)); // one retry
+    // Groq checks the JSON against the schema itself and answers 400 when the model's output doesn't fit;
+    // that, like output our own check rejects, is a bad answer worth one more try.
+    const attempt = async () => {
+      try {
+        return parseAnswer(await groq(key, request));
+      } catch (e) {
+        if (e instanceof GroqError && e.status === 400 && /schema|failed_generation|json_validate/i.test(e.message)) return { ok: false as const, error: "Groq's output didn't match the schema." };
+        throw e;
+      }
+    };
+    let parsed = await attempt();
+    if (!parsed.ok) parsed = await attempt(); // one retry
     if (!parsed.ok) return json({ error: "bad_answer", detail: parsed.error }, 502);
 
     return json({ checked: checkAnswer(parsed.answer, built.sources, built.map), mask: built.map });
