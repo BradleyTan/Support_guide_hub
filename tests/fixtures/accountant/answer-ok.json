@@ -1,0 +1,24 @@
+{
+  "needsMoreInfo": false,
+  "questions": [],
+  "summary": "The customer's bank deducted RM10, so RM990 arrived against a RM1,000 invoice. Record the RM10 as bank charges so the invoice is fully paid.",
+  "assumptions": ["The RM10 was charged by the customer's bank, not a discount you agreed to."],
+  "entries": [
+    {
+      "date": null,
+      "description": "Receipt for invoice IV-00123 with bank charges deducted",
+      "lines": [
+        { "account": "Bank", "accountType": "asset", "dr": 990, "cr": null },
+        { "account": "Bank charges", "accountType": "expense", "dr": 10, "cr": null },
+        { "account": "Trade debtor - [COMPANY 1]", "accountType": "asset", "dr": null, "cr": 1000 }
+      ]
+    }
+  ],
+  "steps": [
+    { "platform": "cloud", "text": "Create a receipt for RM990 and knock off the invoice.", "menuPath": "Sales > Receive Payment", "sourceIds": ["S1"] },
+    { "platform": "desktop", "text": "Create an A/R payment for RM990 with RM10 bank charge.", "menuPath": "A/R > A/R Payment", "sourceIds": ["S2"] }
+  ],
+  "customerMessage": "Your bank deducted RM10 from the payment. We'll record the RM10 as bank charges so invoice IV-00123 is fully settled.",
+  "needsAccountant": null,
+  "doubts": []
+}
