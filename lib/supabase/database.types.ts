@@ -7,6 +7,20 @@ export type Database = {
   };
   public: {
     Tables: {
+      accountant_chats: {
+        Row: { id: string; user_id: string; title: string; mask_map: Json; fts: unknown; created_at: string; updated_at: string; deleted_at: string | null };
+        Insert: { id?: string; user_id?: string; title: string; mask_map?: Json; fts?: unknown; created_at?: string; updated_at?: string; deleted_at?: string | null };
+        Update: Partial<Database["public"]["Tables"]["accountant_chats"]["Insert"]>;
+        Relationships: [];
+      };
+      accountant_messages: {
+        Row: { id: string; chat_id: string; user_id: string; role: string; content: string; answer: Json | null; checked: boolean; created_at: string };
+        Insert: { id?: string; chat_id: string; user_id?: string; role: string; content?: string; answer?: Json | null; checked?: boolean; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["accountant_messages"]["Insert"]>;
+        Relationships: [
+          { foreignKeyName: "accountant_messages_chat_id_fkey"; columns: ["chat_id"]; isOneToOne: false; referencedRelation: "accountant_chats"; referencedColumns: ["id"] },
+        ];
+      };
       analyses: {
         Row: {
           code: string;
@@ -129,6 +143,7 @@ export type Database = {
           fts: unknown;
           id: string;
           module: string;
+          platform: string;
           prevention: string | null;
           product: string;
           steps: string[];
@@ -152,6 +167,7 @@ export type Database = {
           fts?: unknown;
           id?: string;
           module?: string;
+          platform?: string;
           prevention?: string | null;
           product: string;
           steps?: string[];
@@ -331,6 +347,8 @@ export type Database = {
       user_settings: {
         Row: {
           analyst_model: string;
+          chat_model: string;
+          chat_web_search: boolean;
           default_model: string;
           mask_sensitive: boolean;
           official_sites: string[];
@@ -340,6 +358,8 @@ export type Database = {
         };
         Insert: {
           analyst_model?: string;
+          chat_model?: string;
+          chat_web_search?: boolean;
           default_model?: string;
           mask_sensitive?: boolean;
           official_sites?: string[];
@@ -373,6 +393,14 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      search_accountant_chats: {
+        Args: { p_query: string; p_limit?: number };
+        Returns: { id: string; score: number }[];
+      };
+      accountant_chat_fts: {
+        Args: { p_chat_id: string; p_title: string };
+        Returns: unknown;
+      };
       similar_guides: {
         Args: { p_title: string; p_error?: string; p_limit?: number };
         Returns: { id: string; code: string; title: string; score: number }[];
