@@ -2,9 +2,20 @@
 
 A personal guidelines tool for an AutoCount support consultant: a searchable library of your own fixes and how-tos, search across your guides and AutoCount's official help centres, plus reply and SOP helpers. Tickets stay in Zoho Desk.
 
-Everything runs on free tiers and open-source libraries: no paid services, and nothing to run on your PC. AI features are **off** by choice; nothing is sent to an AI service.
+Everything runs on free tiers and open-source libraries: no paid services, and nothing to run on your PC. The only AI is the **Accountant chat**, which uses Groq’s free plan; everything else works without AI.
 
 > **Status: Phase 7 (go-live).** All features are built. Hosting: Netlify free plan; follow [docs/GO-LIVE.md](docs/GO-LIVE.md) to deploy.
+
+## Accountant chat (Groq, free)
+
+- Type a customer’s accounting scenario. You get **For you** (what’s going on, assumptions, journal entries, Desktop and Cloud steps, sources, doubts) and **For the customer** (a ready-to-send reply). Every answer is labelled **Check before relying**; **Copy for the customer** appears only after you tick “I’ve checked the entry and steps”. When facts are missing it asks up to 5 questions first.
+- **Privacy:** IC, bank, phone and email numbers and company names (Sdn Bhd, Berhad, Enterprise, Trading, PLT…) are replaced with placeholders such as `[COMPANY 1]` before anything is sent; **Preview what’s sent** shows exactly what Groq receives and lets you hide more (e.g. a person’s name). Your guides and articles are masked by the same rules. Chats are saved unmasked in your own private database.
+- **Sources, in order:** your guides, your Knowledge hub, the AutoCount help centre, then (only if you turn it on in Settings) Groq’s web search.
+- **Checks done by code, not the AI:** every entry must balance to the sen or it is marked “Didn’t balance — not sent to the customer”; a menu path reaches the customer only when a **checked** source of the right platform states it (a verified guide, a Knowledge article with checked menu paths, or a help-centre page, which is always Cloud). Otherwise the reply says “I’ll confirm the exact menu and get back to you.” Guides now have a **Platform** (Desktop, Cloud or both) for this.
+- **Save as guide** opens a new guide prefilled from an answer (only confirmed steps); it starts Unverified.
+- **Free limits (Groq, Oct 2026):** about 8,000 tokens a minute and 200,000 a day — roughly one answer a minute and 25–35 a day. When busy, the page says how long to wait. The model is set in Settings → Accountant chat.
+- **Live quality check:** `npm run eval:accountant` sends 10 common scenarios (`evals/scenarios.ts`) to the deployed function as the e2e test account and checks the entries. It uses about 10–15 of the day’s free requests and saves nothing. Not part of `npm test`.
+- Setup (Groq key, Zero Data Retention): [docs/GO-LIVE.md](docs/GO-LIVE.md).
 
 ## Knowledge hub (no AI)
 
@@ -83,8 +94,8 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables; 0011 Knowledge hub). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
-- Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`).
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables; 0011 Knowledge hub; 0012 Accountant chat and the guide Platform field). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`, `ask-accountant`). Code shared by the app and `ask-accountant` lives in `lib/accountant/core/`; run `npm run sync:core` after changing it (a unit test fails if the copy in `supabase/functions/_shared/` drifts), then redeploy the function.
 - **Bin:** deleted items stay restorable for 30 days; every night at 03:45 Malaysia time the `purge-bin` job removes older ones for good (guides together with their files). The function only accepts calls carrying a secret kept in the database Vault, which only the scheduled job sends.
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.
 - Security checks: run the scripts in `supabase/tests/` in the Supabase SQL editor. Each uses a transaction, rolls back, and reports "all checks passed".
