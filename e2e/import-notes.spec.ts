@@ -39,7 +39,8 @@ function makePdf(lines: string[]) {
 }
 
 async function expectReview(page: import("@playwright/test").Page) {
-  await expect(page.getByText("3 issues found")).toBeVisible();
+  // Reading a PDF loads a large PDF library in the browser; allow for a slow PC (the checks themselves are unchanged).
+  await expect(page.getByText("3 issues found")).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "Next: match columns" }).click();
   await expect(page.getByRole("combobox", { name: "Save column Title as" })).toHaveText(/Title/);
   await expect(page.getByRole("combobox", { name: "Save column Fix steps as" })).toHaveText(/Fix steps/);
@@ -70,7 +71,7 @@ test("files without notes, scanned PDFs and other file types get a clear message
   await input.setInputFiles({ name: "meeting.txt", mimeType: "text/plain", buffer: Buffer.from("Agenda\nNothing to import") });
   await expect(page.getByRole("main").getByRole("alert")).toContainText("No “Issue:” found in meeting.txt");
   await input.setInputFiles({ name: "scan.pdf", mimeType: "application/pdf", buffer: makePdf([]) });
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("looks like a scanned PDF");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("looks like a scanned PDF", { timeout: 30_000 });
   await input.setInputFiles({ name: "notes.docx", mimeType: "application/octet-stream", buffer: Buffer.from("x") });
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Use an Excel (.xlsx, .xls), CSV, PDF or text (.txt) file");
 });
