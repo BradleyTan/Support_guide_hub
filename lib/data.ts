@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/lib/supabase/database.types";
 import { parseSteps as parseSopSteps, type Sop, type SopImage } from "@/lib/sop";
 import { rowToArticle, type KnowledgeArticle, type KnowledgeRow } from "@/lib/knowledge/model";
+import { rowToMessage, type ChatMessage } from "@/lib/accountant/chat";
+import type { CheckedAnswer } from "@/lib/accountant/core/answer";
+import type { MaskMap } from "@/lib/accountant/core/mask";
 import { analysisResultSchema } from "@/lib/analysis-schema";
 import type { Analysis, Attachment, Category, Confidence, Guide, Platform, Product, Template, TemplateKind } from "@/lib/types";
 import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
@@ -259,3 +262,83 @@ export const getPaletteArticles = cache(async (): Promise<{ id: string; title: s
     return [];
   }
 });
+
+// ---------------------------------------------------------------------------
+// Accountant chat
+
+export interface ChatSummary {
+  id: string;
+  title: string;
+  updatedAt: string;
+  answerCount: number;
+  checkedCount: number;
+}
+
+const isUuid = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
+
+/** Saved chats (not in the bin), most recently used first. */
+export const getChats = cache(async (): Promise<ChatSummary[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("accountant_chats")
+    .select("id, title, updated_at, accountant_messages(role, checked)")
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(`Couldn’t load your chats: ${error.message}`);
+  return data.map((c) => {
+    const answers = c.accountant_messages.filter((m) => m.role === "assistant");
+    return { id: c.id, title: c.title, updatedAt: c.updated_at, answerCount: answers.length, checkedCount: answers.filter((m) => m.checked).length };
+  });
+});
+
+export const getChat = cache(async (id: string): Promise<{ id: string; title: string; mask: MaskMap; messages: ChatMessage[] } | null> => {
+  if (!isUuid(id)) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("accountant_chats")
+    .select("id, title, mask_map, accountant_messages(id, role, content, answer, checked, created_at)")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(`Couldn’t load the chat: ${error.message}`);
+  if (!data) return null;
+  const messages = [...data.accountant_messages].sort((a, b) => a.created_at.localeCompare(b.created_at) || (a.role === "user" ? -1 : 1)).map(rowToMessage);
+  return { id: data.id, title: data.title, mask: (data.mask_map ?? {}) as MaskMap, messages };
+});
+
+/** Chats in the bin (deleted in the last 30 days), newest first. */
+export const getDeletedChats = cache(async (): Promise<{ id: string; title: string; deletedAt: string }[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("accountant_chats").select("id, title, deleted_at").not("deleted_at", "is", null).order("deleted_at", { ascending: false });
+  if (error) throw new Error(`Couldn’t load deleted chats: ${error.message}`);
+  return data.map((c) => ({ id: c.id, title: c.title, deletedAt: c.deleted_at! }));
+});
+
+/** Answers since midnight Malaysia time (the free Groq limits reset daily). */
+export async function answersToday(): Promise<number> {
+  const myDate = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
+  const supabase = await createClient();
+  const { count } = await supabase.from("accountant_messages").select("id", { count: "exact", head: true }).eq("role", "assistant").gte("created_at", `${myDate}T00:00:00+08:00`);
+  return count ?? 0;
+}
+
+/** One saved answer and the scenario that led to it, for "Save as guide". */
+export async function getChatAnswer(messageId: string): Promise<{ answer: CheckedAnswer; scenario: string } | null> {
+  if (!isUuid(messageId)) return null;
+  const supabase = await createClient();
+  const { data: msg } = await supabase.from("accountant_messages").select("id, chat_id, role, content, answer, checked, created_at").eq("id", messageId).maybeSingle();
+  if (!msg || msg.role !== "assistant") return null;
+  const answer = rowToMessage(msg).answer;
+  if (!answer) return null;
+  const { data: before } = await supabase
+    .from("accountant_messages")
+    .select("content")
+    .eq("chat_id", msg.chat_id)
+    .eq("role", "user")
+    .lte("created_at", msg.created_at)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return { answer, scenario: before?.content ?? "" };
+}
