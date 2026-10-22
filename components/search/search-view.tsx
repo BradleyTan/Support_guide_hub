@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { BookText, ExternalLink, Globe, GraduationCap, Loader2, Pin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { BookText, ExternalLink, Globe, GraduationCap, Loader2, MessagesSquare, Pin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { PageHeader } from "@/components/shared/page-header";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
-import { pinToGuide, searchKnowledge, searchMyGuides, searchOfficialSources, type GuideHit, type KnowledgeHit, type MatchSource, type OfficialResult, type SearchFilters } from "@/app/(app)/search/actions";
+import { pinToGuide, searchChats, searchKnowledge, searchMyGuides, searchOfficialSources, type ChatHit, type GuideHit, type KnowledgeHit, type MatchSource, type OfficialResult, type SearchFilters } from "@/app/(app)/search/actions";
 import { googleFallbackUrl, HELP_CENTRES, OTHER_OFFICIAL_SITES, type OfficialHit } from "@/lib/official-sites";
 import { shortProduct } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
@@ -95,6 +95,7 @@ export function SearchView({
   initialMine,
   initialOfficial,
   initialKnowledge = [],
+  initialChats = [],
   guides,
 }: {
   initialQuery: string;
@@ -103,9 +104,12 @@ export function SearchView({
   initialOfficial: OfficialState;
   /** Knowledge hub matches for the first query (empty when there are none). */
   initialKnowledge?: KnowledgeHit[];
+  /** Saved Accountant chats for the first query. */
+  initialChats?: ChatHit[];
   guides: { id: string; title: string }[];
 }) {
   const [knowledge, setKnowledge] = useState<KnowledgeHit[]>(initialKnowledge);
+  const [chats, setChats] = useState<ChatHit[]>(initialChats);
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<SearchFilters>({});
@@ -124,10 +128,12 @@ export function SearchView({
       setMine(null);
       setOfficial(null);
       setKnowledge([]);
+      setChats([]);
       return;
     }
     // Knowledge hub matches are a bonus: a failure just shows none (guides and official results report their own errors).
     void searchKnowledge(q).then((res) => setKnowledge(res.ok ? res.hits : []));
+    void searchChats(q).then((res) => setChats(res.ok ? res.hits : []));
     startMine(async () => {
       const res = await searchMyGuides(q, f);
       if (res.ok) {
@@ -294,6 +300,21 @@ export function SearchView({
                     <span className="block text-sm font-medium break-words group-hover:underline">{k.title}</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">{k.category}</span>
                     <span className="mt-1 line-clamp-2 block text-sm break-words text-muted-foreground">{k.tellCustomer}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {chats.length > 0 && (
+          <section aria-labelledby="sec-chats" className="mb-6 min-w-0">
+            <SectionTitle id="sec-chats" icon={MessagesSquare} title="Chats" meta={`${chats.length} ${chats.length === 1 ? "chat" : "chats"}`} />
+            <ul className="grid gap-2 md:grid-cols-2">
+              {chats.map((c) => (
+                <li key={c.id}>
+                  <Link href={`/chat/${c.id}`} className="group block rounded-lg border bg-card p-3 transition-colors hover:border-primary/50">
+                    <span className="block text-sm font-medium break-words group-hover:underline">{c.title}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">Accountant chat · {formatDate(c.updatedAt)}</span>
                   </Link>
                 </li>
               ))}

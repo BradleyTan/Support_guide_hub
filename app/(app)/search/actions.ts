@@ -142,3 +142,25 @@ export async function searchKnowledge(query: string): Promise<{ ok: true; hits: 
     }),
   };
 }
+
+export type ChatHit = { id: string; title: string; updatedAt: string };
+
+/** Your saved Accountant chats for a query (words in the chat or similar title spelling), in rank order. RLS applies. */
+export async function searchChats(query: string): Promise<{ ok: true; hits: ChatHit[] } | { ok: false; error: string }> {
+  const q = querySchema.safeParse(query);
+  if (!q.success) return { ok: true, hits: [] };
+  if (!(await getUser())) return { ok: false, error: "Your session has ended. Please sign in again." };
+  const supabase = await createClient();
+  const { data: ranked, error } = await supabase.rpc("search_accountant_chats", { p_query: q.data, p_limit: 5 });
+  if (error) return { ok: false, error: "Chat search didn’t finish. Please try again." };
+  if (!ranked.length) return { ok: true, hits: [] };
+  const { data: rows } = await supabase.from("accountant_chats").select("id, title, updated_at").in("id", ranked.map((r) => r.id));
+  const byId = new Map((rows ?? []).map((r) => [r.id, r]));
+  return {
+    ok: true,
+    hits: ranked.flatMap((r) => {
+      const c = byId.get(r.id);
+      return c ? [{ id: c.id, title: c.title, updatedAt: c.updated_at }] : [];
+    }),
+  };
+}

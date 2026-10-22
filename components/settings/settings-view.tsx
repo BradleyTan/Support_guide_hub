@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { Download, KeyRound, Loader2, RotateCcw } from "lucide-react";
 import { restoreGuide } from "@/app/(app)/guides/actions";
 import { restoreArticle } from "@/app/(app)/knowledge/actions";
+import { restoreChat } from "@/app/(app)/chat/actions";
 import type { KnowledgeArticle } from "@/lib/knowledge/model";
 import { clearSearchHistory } from "@/app/(app)/insights/actions";
-import { exportEverything } from "@/app/(app)/settings/actions";
+import { exportEverything, saveChatSettings } from "@/app/(app)/settings/actions";
 import { downloadXlsx } from "@/lib/download-xlsx";
 import { exportFileName } from "@/lib/export";
 import { ACTIVITY_DAYS } from "@/lib/insights";
@@ -15,6 +16,8 @@ import { formatDate } from "@/lib/format";
 import type { Guide } from "@/lib/types";
 import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/shared/page-header";
 import { OFFICIAL_SITES } from "@/lib/official-sites";
 
@@ -171,14 +174,107 @@ function DeletedArticles({ articles }: { articles: KnowledgeArticle[] }) {
   );
 }
 
+function ChatSettings({ initial }: { initial: { model: string; webSearch: boolean } }) {
+  const router = useRouter();
+  const [model, setModel] = useState(initial.model);
+  const [webSearch, setWebSearch] = useState(initial.webSearch);
+  const [saving, setSaving] = useState(false);
+
+  async function save(next: { model: string; webSearch: boolean }) {
+    setSaving(true);
+    const res = await saveChatSettings(next);
+    setSaving(false);
+    if (!res.ok) {
+      setWebSearch(initial.webSearch);
+      return void toast.error(res.error);
+    }
+    toast.success("Chat settings saved");
+    router.refresh();
+  }
+
+  return (
+    <>
+      <Row title="Model" description="The Groq model that answers. Change it only if Groq retires this one (they email you first).">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void save({ model, webSearch });
+          }}
+        >
+          <Input aria-label="Model" value={model} onChange={(e) => setModel(e.target.value)} maxLength={100} className="font-mono text-xs" />
+          <Button type="submit" variant="outline" disabled={saving || model.trim() === initial.model}>
+            Save
+          </Button>
+        </form>
+      </Row>
+      <Row title="Use web search when my sources don’t cover it" description="Check in your Groq account that browser search is free for you before turning this on. Web results never supply AutoCount menu paths.">
+        <Switch
+          aria-label="Use web search when my sources don’t cover it"
+          checked={webSearch}
+          disabled={saving}
+          onCheckedChange={(v) => {
+            setWebSearch(v);
+            void save({ model: initial.model, webSearch: v });
+          }}
+        />
+      </Row>
+    </>
+  );
+}
+
+function DeletedChats({ chats }: { chats: { id: string; title: string; deletedAt: string }[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  return (
+    <div className="py-4">
+      <p className="text-sm font-medium">Deleted chats</p>
+      <p className="mt-0.5 max-w-[60ch] text-sm text-muted-foreground">Kept here for 30 days so you can restore them, then removed for good overnight.</p>
+      {chats.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">The bin is empty.</p>
+      ) : (
+        <ul className="mt-3 divide-y rounded-md border bg-background">
+          {chats.map((c) => (
+            <li key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+              <span className="min-w-0 flex-1 truncate">{c.title}</span>
+              <span className="text-xs text-muted-foreground">deleted {formatDate(c.deletedAt)}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label={`Restore ${c.title}`}
+                disabled={busy === c.id}
+                onClick={async () => {
+                  setBusy(c.id);
+                  const res = await restoreChat(c.id);
+                  setBusy(null);
+                  if (res.ok) {
+                    toast.success(`“${c.title}” restored`);
+                    router.refresh();
+                  } else toast.error(res.error);
+                }}
+              >
+                {busy === c.id ? <Loader2 className="animate-spin" /> : <RotateCcw />} Restore
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function SettingsView({
   deleted,
   deletedArticles,
+  deletedChats,
+  chat,
   indexed,
   searchesLogged,
 }: {
   deleted: Guide[];
   deletedArticles: KnowledgeArticle[];
+  deletedChats: { id: string; title: string; deletedAt: string }[];
+  chat: { model: string; webSearch: boolean };
   indexed: { count: number; lastRefreshed: string | null };
   searchesLogged: number;
 }) {
@@ -187,9 +283,17 @@ export function SettingsView({
       <PageHeader title="Settings" description="Account, official sources and your data." />
       <div className="flex max-w-4xl flex-col gap-6">
         <Card title="AI">
-          <Row title="AI features are off" description="You chose not to use AI for now: no guide drafting, AI search answers or accounting analysis. Nothing is sent to an AI service. Turning AI on later needs your approval and an Anthropic API key.">
-            <span className="text-sm text-muted-foreground">Off</span>
+          <Row
+            title="Only the Accountant chat uses AI"
+            description="It sends your scenario to Groq’s free AI, with names, IC, bank and phone numbers hidden first. Everything else in the app (search, guides, the analyst calculator) works without AI. Turn on Zero Data Retention in Groq so nothing is kept there."
+          >
+            <span className="text-sm text-muted-foreground">Groq, free plan</span>
           </Row>
+        </Card>
+
+        <Card title="Accountant chat">
+          <ChatSettings initial={chat} />
+          <DeletedChats chats={deletedChats} />
         </Card>
 
         <Card title="Privacy">
