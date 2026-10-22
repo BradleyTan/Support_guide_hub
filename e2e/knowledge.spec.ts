@@ -102,10 +102,12 @@ test.describe("saving (writes data)", () => {
     await page.getByRole("link", { name: "Edit" }).click();
     await page.getByLabel("What it is").fill(`See https://example.com/${"averyveryverylongpath".repeat(12)} for details.`);
     await page.getByRole("button", { name: "Save article" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment" })).toBeVisible();
+    // Wait for the article page itself: the edit page's heading ("Edit: [e2e] …") also contains the title.
+    await expect(page).toHaveURL(/\/knowledge\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment", exact: true })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment", exact: true })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, "article page wider than a phone screen").toBeLessThanOrEqual(1);
     await page.setViewportSize({ width: 1440, height: 900 });
