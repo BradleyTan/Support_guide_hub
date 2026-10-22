@@ -65,8 +65,7 @@ async function fetchArticleText(url: string): Promise<string> {
   }
 }
 
-// deno-lint-ignore no-explicit-any
-type Db = any;
+type Db = ReturnType<typeof createClient>;
 
 /** Guides first, then Knowledge hub, then help-centre pages — the order the prompt asks the model to prefer. */
 async function gatherSources(db: Db, message: string): Promise<Source[]> {
