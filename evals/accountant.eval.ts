@@ -3,7 +3,8 @@ import { createClient, FunctionsHttpError, type SupabaseClient } from "@supabase
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CheckedAnswer } from "@/lib/accountant/core/answer";
 import { autoMask } from "@/lib/accountant/core/mask";
-import { SCENARIOS, type ExpectedLine } from "./scenarios";
+import { missingLines } from "./match";
+import { SCENARIOS } from "./scenarios";
 
 /**
  * Live quality check: sends the 10 scenarios to the deployed ask-accountant function, signed in as the e2e test
@@ -15,16 +16,6 @@ const env = (k: string) => process.env[k] ?? "";
 const missing = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "E2E_EMAIL", "E2E_PASSWORD"].filter((k) => !env(k));
 
 const PAUSE_MS = 8_000; // stays under Groq's free 8,000 tokens a minute
-
-/** Every expected line is found in the answer's entries (same type, side and amount), each answer line used once. */
-export function containsLines(c: CheckedAnswer, expected: ExpectedLine[]): ExpectedLine[] {
-  const pool = c.answer.entries.flatMap((e) => e.lines.map((l) => ({ type: l.accountType, side: l.dr !== null ? "dr" : "cr", amount: l.dr ?? l.cr ?? 0, used: false })));
-  return expected.filter((x) => {
-    const hit = pool.find((p) => !p.used && p.type === x.type && p.side === x.side && Math.abs(p.amount - x.amount) < 0.005);
-    if (hit) hit.used = true;
-    return !hit;
-  });
-}
 
 /** Calls ask-accountant; when Groq's free per-minute limit is busy, waits as long as it says and tries again. */
 async function askWith(sb: SupabaseClient, message: string): Promise<CheckedAnswer> {
@@ -72,7 +63,7 @@ describe.skipIf(missing.length > 0)("Accountant chat — live quality check", ()
       }
       expect(a.needsMoreInfo, `asked instead of answering: ${a.questions.join(" | ")}`).toBe(false);
       c.entryResults.forEach((r, i) => expect(r.balanced, `entry ${i + 1}: ${r.problem}`).toBe(true));
-      if (s.lines) expect(containsLines(c, s.lines), `expected lines not found. The answer gave: ${describeEntries(c)}`).toEqual([]);
+      if (s.lines) expect(missingLines(c, s.lines), `expected lines not found. The answer gave: ${describeEntries(c)}`).toEqual([]);
       if (s.needsAccountant) expect(a.needsAccountant, "should say to check with the accountant").toBeTruthy();
       // A menu path counts as confirmed only with a non-web source behind it.
       for (const step of c.steps.filter((x) => x.status === "confirmed" && x.menuPath)) {
