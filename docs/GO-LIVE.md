@@ -48,6 +48,8 @@ Chosen because its free plan allows work use (Vercel's free plan is non-commerci
 
 ## Security and data
 
+- [x] **You:** Supabase → Authentication → Sign In / Providers → **Allow new users to sign up** turned off (just you for now; add people under Authentication → Users → Add user, and only after deciding how they share data and the Groq limits).
+
 - [ ] Supabase security advisor shows no issues apart from the optional item below; the scripts in `supabase/tests/` all report “all checks passed”.
 - [ ] Optional, **You:** Authentication → Settings (Password security) → turn on **Leaked password protection** (blocks passwords found in known data leaks). It may need a paid plan.
 - [ ] Signed-in browser tests use a **separate test account**, not your main one.
