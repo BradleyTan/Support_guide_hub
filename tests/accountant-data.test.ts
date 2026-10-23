@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CheckedAnswer, ModelAnswer } from "@/lib/accountant/core/answer";
-import { askErrorMessage, chatTitle, historyForGroq, rowToMessage, turnRows, unmaskAnswer, type ChatMessage } from "@/lib/accountant/chat";
+import { askErrorMessage, chatTitle, historyForGroq, questionFor, rowToMessage, turnRows, unmaskAnswer, webSearchNote, type ChatMessage } from "@/lib/accountant/chat";
 import { answerToGuideInput } from "@/lib/accountant/to-guide";
 import { guideInputSchema } from "@/lib/guide-schema";
 
@@ -123,5 +123,30 @@ describe("turnRows", () => {
     expect(rows[0]).toMatchObject({ role: "user", content: "Question?", answer: null });
     expect(rows[1]).toMatchObject({ role: "assistant", content: "" });
     expect(rows[1].answer).not.toBeNull();
+  });
+});
+
+describe("questionFor", () => {
+  const msg = (id: string, role: "user" | "assistant", content = ""): ChatMessage => ({ id, role, content, answer: role === "assistant" ? checked() : null, checked: false, createdAt: "" });
+
+  it("finds the question behind an answer and the turns before it", () => {
+    const msgs = [msg("q1", "user", "First"), msg("a1", "assistant"), msg("q2", "user", "Second"), msg("a2", "assistant")];
+    const r = questionFor(msgs, "a2");
+    expect(r?.question).toBe("Second");
+    expect(r?.earlier.map((m) => m.id)).toEqual(["q1", "a1"]);
+    expect(questionFor(msgs, "a1")?.earlier).toEqual([]);
+  });
+
+  it("is null for an unknown answer or one with no question before it", () => {
+    expect(questionFor([msg("a1", "assistant")], "a1")).toBeNull();
+    expect(questionFor([], "x")).toBeNull();
+  });
+});
+
+describe("webSearchNote", () => {
+  it("explains a web search that failed, and stays quiet otherwise", () => {
+    expect(webSearchNote("failed")).toMatch(/free plan/i);
+    expect(webSearchNote("used")).toBeNull();
+    expect(webSearchNote("off")).toBeNull();
   });
 });

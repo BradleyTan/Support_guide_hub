@@ -119,6 +119,22 @@ test.describe("read-only", () => {
     expect(JSON.stringify(bodies[1].history) + bodies[1].message).not.toContain("Siti");
   });
 
+  test("Search the web too asks the same question again with web search, and says when it didn't work", async ({ page }) => {
+    await preview(page, "What is the latest e-Invoice phase for Lee Trading Sdn Bhd?");
+    const bodies = await stubAsk(page, (body) => ({ status: 200, json: { checked: okAnswer, mask: body.mask, web: (body as { forceWeb?: boolean }).forceWeb ? "failed" : "off" } }));
+    // Saving fails on purpose, so nothing is written; the answer still shows.
+    await page.route("**/chat", (route) => (route.request().method() === "POST" && route.request().headers()["next-action"] ? route.fulfill({ status: 500, body: "" }) : route.continue()));
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("article", { name: "Answer" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Search the web too" }).first().click();
+    await expect.poll(() => bodies.length).toBe(2);
+    expect((bodies[1] as { forceWeb?: boolean }).forceWeb).toBe(true);
+    expect(bodies[1].message).toBe(bodies[0].message);
+    expect(bodies[1].message).not.toContain("Lee Trading");
+    await expect(page.getByText("Web search didn't work")).toBeVisible();
+  });
+
   test("a missing Groq key is explained", async ({ page }) => {
     await preview(page, "Customer short-paid RM10.");
     await stubAsk(page, () => ({ status: 503, json: { error: "not_configured" } }));

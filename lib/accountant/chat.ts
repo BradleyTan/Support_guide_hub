@@ -69,3 +69,17 @@ export function turnRows(chatId: string, question: string, answer: CheckedAnswer
     { chat_id: chatId, role: "assistant", content: "", answer: answer as unknown as Json },
   ];
 }
+
+/** The question an answer replied to, and the turns before it, so it can be asked again (e.g. with web search). */
+export function questionFor(messages: ChatMessage[], answerId: string): { question: string; earlier: ChatMessage[] } | null {
+  const at = messages.findIndex((m) => m.id === answerId);
+  for (let i = at - 1; i >= 0; i--) if (messages[i].role === "user") return { question: messages[i].content, earlier: messages.slice(0, i) };
+  return null;
+}
+
+/** "used": a Web source was added; "failed": Groq refused or errored; "off": not asked for. */
+export type WebSearchStatus = "used" | "failed" | "off";
+
+export function webSearchNote(status: WebSearchStatus): string | null {
+  return status === "failed" ? "Web search didn't work — Groq's free plan may not include it. This answer uses your own sources only." : null;
+}

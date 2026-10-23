@@ -13,7 +13,7 @@ import { AnswerView } from "@/components/chat/answer-view";
 import { ChatList } from "@/components/chat/chat-list";
 import { Composer } from "@/components/chat/composer";
 import { deleteChat, renameChat, restoreChat, saveTurn } from "@/app/(app)/chat/actions";
-import { historyForGroq, unmaskAnswer, type ChatMessage } from "@/lib/accountant/chat";
+import { historyForGroq, questionFor, unmaskAnswer, webSearchNote, type ChatMessage } from "@/lib/accountant/chat";
 import { askAccountant } from "@/lib/accountant/client";
 import { autoMask, type MaskMap } from "@/lib/accountant/core/mask";
 import type { ChatSummary } from "@/lib/data";
@@ -36,41 +36,56 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
 
   const messages = [...(chat?.messages ?? []), ...local.filter((l) => !chat?.messages.some((m) => m.id === l.id))];
 
-  async function send(masked: string, map: MaskMap) {
+  /** Asks Groq, shows the answer, then saves the turn. `userText` is what gets saved as the question. */
+  async function ask(opts: { masked: string; map: MaskMap; userText: string; earlier: ChatMessage[]; forceWeb?: boolean }) {
     setBusy(true);
     setError(null);
     // Earlier turns are masked with the same map, so Groq sees the same placeholders throughout.
-    let m = { ...mask, ...map };
-    const history = historyForGroq(messages).map((t) => {
+    let m = { ...mask, ...opts.map };
+    const history = historyForGroq(opts.earlier).map((t) => {
       const r = autoMask(t.content, m);
       m = r.map;
       return { role: t.role, content: r.text };
     });
-    const res = await askAccountant({ message: masked, history, mask: m });
+    const res = await askAccountant({ message: opts.masked, history, mask: m, forceWeb: opts.forceWeb });
     if (!res.ok) {
       setBusy(false);
       setError(res.error);
       return;
     }
     setMask(res.mask);
+    const note = webSearchNote(res.web);
+    if (opts.forceWeb && note) toast.warning(note);
     const answer = unmaskAnswer(res.checked, res.mask);
     const now = new Date().toISOString();
     setLocal((l) => [
       ...l,
-      { id: `local-q-${now}`, role: "user", content: text, answer: null, checked: false, createdAt: now },
+      { id: `local-q-${now}`, role: "user", content: opts.userText, answer: null, checked: false, createdAt: now },
       { id: `local-a-${now}`, role: "assistant", content: "", answer, checked: false, createdAt: now },
     ]);
-    const saved = await saveTurn({ chatId: chat?.id ?? null, userText: text, answer, mask: res.mask }).catch(() => ({ ok: false as const, error: "Couldn’t save the answer." }));
+    const saved = await saveTurn({ chatId: chat?.id ?? null, userText: opts.userText, answer, mask: res.mask }).catch(() => ({ ok: false as const, error: "Couldn’t save the answer." }));
     setBusy(false);
     if (!saved.ok) {
-      setText("");
+      if (!opts.forceWeb) setText("");
       toast.error(saved.error, { description: "The answer is shown here but wasn’t saved." });
       return;
     }
-    setText("");
+    if (!opts.forceWeb) setText("");
     setLocal([]);
     if (!chat) router.push(`/chat/${saved.data.chatId}`);
     else router.refresh();
+  }
+
+  function send(masked: string, map: MaskMap) {
+    void ask({ masked, map, userText: text, earlier: messages });
+  }
+
+  /** "Search the web too": the same question again, this time with Groq's web search. */
+  function searchWeb(answerId: string) {
+    const q = questionFor(messages, answerId);
+    if (!q) return;
+    const masked = autoMask(q.question, mask);
+    void ask({ masked: masked.text, map: masked.map, userText: `${q.question}\n\n(Asked again with web search)`.slice(0, 4000), earlier: q.earlier, forceWeb: true });
   }
 
   function rename() {
@@ -148,7 +163,7 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
                 {m.content}
               </div>
             ) : (
-              <AnswerView key={m.id} message={m} />
+              <AnswerView key={m.id} message={m} onSearchWeb={busy ? undefined : () => searchWeb(m.id)} />
             ),
           )}
           <Composer text={text} onText={setText} mask={mask} busy={busy || working} error={error} onSend={send} />

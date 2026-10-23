@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, BookPlus, Copy, ExternalLink } from "lucide-react";
+import { AlertTriangle, BookPlus, Copy, ExternalLink, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { setAnswerChecked } from "@/app/(app)/chat/actions";
@@ -98,7 +98,8 @@ function Steps({ steps }: { steps: CheckedStep[] }) {
   );
 }
 
-export function AnswerView({ message }: { message: ChatMessage }) {
+/** onSearchWeb: asks the same question again with web search; left out while another answer is on its way. */
+export function AnswerView({ message, onSearchWeb }: { message: ChatMessage; onSearchWeb?: () => void }) {
   const router = useRouter();
   const [checked, setChecked] = useState(message.checked);
   const [saving, start] = useTransition();
@@ -125,6 +126,11 @@ export function AnswerView({ message }: { message: ChatMessage }) {
           <ButtonLink size="sm" variant="ghost" href={`/guides/new?fromChat=${message.id}`}>
             <BookPlus /> Save as guide
           </ButtonLink>
+        )}
+        {!c.sources.some((s) => s.kind === "web") && (
+          <Button size="sm" variant="ghost" disabled={!onSearchWeb} onClick={onSearchWeb} title="Ask this question again, also using Groq’s web search (one extra request)">
+            <Globe /> Search the web too
+          </Button>
         )}
       </div>
 

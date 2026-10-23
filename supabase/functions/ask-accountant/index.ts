@@ -32,7 +32,7 @@ function json(body: unknown, status = 200, extra: Record<string, string> = {}) {
 type Turn = { role: "user" | "assistant"; content: string };
 
 /** The request body, checked by hand (no zod needed for this small shape). */
-function readBody(body: unknown): { message: string; history: Turn[]; mask: MaskMap } | null {
+function readBody(body: unknown): { message: string; history: Turn[]; mask: MaskMap; forceWeb: boolean } | null {
   if (!body || typeof body !== "object") return null;
   const b = body as Record<string, unknown>;
   if (typeof b.message !== "string" || !b.message.trim() || b.message.length > 4000) return null;
@@ -44,7 +44,7 @@ function readBody(body: unknown): { message: string; history: Turn[]; mask: Mask
   const mask = b.mask && typeof b.mask === "object" && !Array.isArray(b.mask) ? (b.mask as Record<string, unknown>) : {};
   const entries = Object.entries(mask);
   if (entries.length > MAX_MASK_ENTRIES || entries.some(([k, v]) => !PLACEHOLDER_KEY.test(k) || typeof v !== "string" || v.length > 300)) return null;
-  return { message: b.message, history: (history as Turn[]).slice(-6), mask: mask as MaskMap };
+  return { message: b.message, history: (history as Turn[]).slice(-6), mask: mask as MaskMap, forceWeb: b.forceWeb === true };
 }
 
 const embedder = new Supabase.ai.Session("gte-small");
@@ -171,13 +171,18 @@ Deno.serve(async (req: Request) => {
 
   try {
     const sources = await gatherSources(db, input.message);
-    if (settings?.chat_web_search && sources.filter((s) => s.checked).length < 2) {
+    // Web search runs when asked for ("Search the web too"), or automatically when the setting is on and the
+    // checked sources are thin. It is optional: if Groq refuses it, the answer uses the user's own sources.
+    let web: "used" | "failed" | "off" = "off";
+    if (input.forceWeb || (settings?.chat_web_search && sources.filter((s) => s.checked).length < 2)) {
       // Masked again here too: the browser already hid names, but this call must never depend on that alone.
-      const web = await webSource(key, model, autoMask(input.message, input.mask).text).catch((e) => {
+      const found = await webSource(key, model, autoMask(input.message, input.mask).text).catch((e) => {
         if (e instanceof GroqError && e.status === 429) throw e;
-        return null; // the web step is optional
+        console.error("[ask-accountant] web search failed", e instanceof GroqError ? `${e.status} ${e.message}` : e);
+        return null;
       });
-      if (web) sources.push(web);
+      web = found ? "used" : "failed";
+      if (found) sources.push(found);
     }
 
     const built = buildMessages({ history: input.history, message: input.message, sources, map: input.mask });
@@ -203,7 +208,7 @@ Deno.serve(async (req: Request) => {
     if (!parsed.ok) parsed = await attempt(); // one retry
     if (!parsed.ok) return json({ error: "bad_answer", detail: parsed.error }, 502);
 
-    return json({ checked: checkAnswer(parsed.answer, built.sources, built.map, built.replyPlaceholders), mask: built.map });
+    return json({ checked: checkAnswer(parsed.answer, built.sources, built.map, built.replyPlaceholders), mask: built.map, web });
   } catch (e) {
     if (e instanceof GroqError) {
       if (e.status === 429) return json({ error: "rate_limited", retryAfter: e.retryAfter }, 429, { "Retry-After": String(e.retryAfter) });
