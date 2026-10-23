@@ -25,7 +25,7 @@ Chosen because its free plan allows work use (Vercel's free plan is non-commerci
 
 - [x] **You:** create a free Netlify account and **Add new project → Import an existing project → GitHub →** `Support_guide_hub`. Netlify reads `netlify.toml`; leave the build settings as detected.
 - [x] **You:** Site configuration → **Environment variables**: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same values as above), then **Deploys → Trigger deploy**.
-- [ ] **You:** Site configuration → Build & deploy → **Branches and deploy contexts**: production branch `main`; turn **Branch deploys** off to save credits.
+- [x] **You:** Site configuration → Build & deploy → **Branches and deploy contexts**: production branch `main`; turn **Branch deploys** off to save credits.
 - [x] Live address: https://atc-supportguide.netlify.app (Netlify visitor access: public; the app's own sign-in protects it).
 
 ## Supabase URL settings
