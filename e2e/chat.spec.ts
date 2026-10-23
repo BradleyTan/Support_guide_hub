@@ -135,6 +135,7 @@ test("settings has the Accountant chat card", async ({ page }) => {
   await expect(card.getByText("Deleted chats")).toBeVisible();
 });
 
+// Saving moves to a new page; the local test server builds each page the first time it opens, so allow 30s.
 test.describe("saving (writes data)", () => {
   test.describe.configure({ mode: "serial" });
   test.skip(({ isMobile }) => isMobile, "write tests run once, on desktop");
@@ -152,7 +153,7 @@ test.describe("saving (writes data)", () => {
     await preview(page, "[e2e] Lee Trading Sdn Bhd paid RM990 for a RM1,000 invoice; their bank took RM10.");
     await stubAsk(page, (body) => ({ status: 200, json: { checked: okAnswer, mask: body.mask } }));
     await page.getByRole("button", { name: "Send" }).click();
-    await expect(page).toHaveURL(/\/chat\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/chat\/[0-9a-f-]{36}$/, { timeout: 30_000 });
 
     const answer = page.getByRole("article", { name: "Answer" });
     await expect(answer.getByText("Check before relying")).toBeVisible();
@@ -174,9 +175,9 @@ test.describe("saving (writes data)", () => {
 
     await page.getByRole("button", { name: "Delete" }).click();
     await page.getByRole("button", { name: "Move to bin" }).click();
-    await expect(page).toHaveURL(/\/chat$/);
+    await expect(page).toHaveURL(/\/chat$/, { timeout: 30_000 });
     await page.getByRole("button", { name: "Undo" }).click();
-    await expect(page).toHaveURL(url);
+    await expect(page).toHaveURL(url, { timeout: 30_000 });
     await expect(page.getByRole("heading", { level: 1, name: "[e2e] renamed chat" })).toBeVisible();
   });
 
@@ -184,7 +185,7 @@ test.describe("saving (writes data)", () => {
     await preview(page, "[e2e] Old deposit never recorded; customer wants to knock it off last month's invoice.");
     await stubAsk(page, (body) => ({ status: 200, json: { checked: questionsOnly, mask: body.mask } }));
     await page.getByRole("button", { name: "Send" }).click();
-    await expect(page).toHaveURL(/\/chat\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/chat\/[0-9a-f-]{36}$/, { timeout: 30_000 });
     await expect(page.getByText("A few questions first")).toBeVisible();
     await expect(page.getByText("Is that financial year closed or audited?")).toBeVisible();
     await expect(page.getByRole("region", { name: "For the customer" })).toHaveCount(0);
@@ -194,9 +195,9 @@ test.describe("saving (writes data)", () => {
     await preview(page, "[e2e] Customer paid RM990 for a RM1,000 invoice; the bank took RM10.");
     await stubAsk(page, (body) => ({ status: 200, json: { checked: okAnswer, mask: body.mask } }));
     await page.getByRole("button", { name: "Send" }).click();
-    await expect(page).toHaveURL(/\/chat\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/chat\/[0-9a-f-]{36}$/, { timeout: 30_000 });
     await page.getByRole("link", { name: "Save as guide" }).click();
-    await expect(page).toHaveURL(/\/guides\/new\?fromChat=/);
+    await expect(page).toHaveURL(/\/guides\/new\?fromChat=/, { timeout: 30_000 });
     await expect(page.getByLabel("Title")).toHaveValue(/bank deducted RM10|customer's bank deducted RM10/i);
     await expect(page.getByLabel("Fix steps")).toHaveValue(/Sales > Receive Payment/);
     await expect(page.getByLabel("Fix steps")).not.toHaveValue(/A\/R > A\/R Payment/);
