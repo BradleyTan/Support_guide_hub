@@ -13,6 +13,8 @@ export interface EvalScenario {
   message: string;
   /** Must ask questions first instead of answering. */
   mustAsk?: boolean;
+  /** Lines that must NOT appear (a known wrong treatment). */
+  mustNot?: ExpectedLine[];
   /** Must say to check with the customer's accountant or auditor. */
   needsAccountant?: boolean;
   lines?: ExpectedLine[];
@@ -38,7 +40,10 @@ export const SCENARIOS: EvalScenario[] = [
     id: 3,
     name: "Customer overpaid, refund the extra",
     message: "Invoice RM2,000. The customer paid RM2,500 by bank transfer. We refunded the extra RM500 to them by bank transfer the next week. What are the entries?",
-    lines: [dr("asset", 2500), cr("asset", 2500), dr("asset", 500), cr("asset", 500)],
+    // The extra RM500 may stay on the customer's account or go to an overpayment / deposit liability; both are right.
+    // Booking the refund to sales (a sales return) is wrong.
+    lines: [dr("asset", 2500), cr("asset", 500)],
+    mustNot: [dr("income", 500)],
   },
   {
     id: 4,

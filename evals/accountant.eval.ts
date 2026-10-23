@@ -64,6 +64,7 @@ describe.skipIf(missing.length > 0)("Accountant chat — live quality check", ()
       expect(a.needsMoreInfo, `asked instead of answering: ${a.questions.join(" | ")}`).toBe(false);
       c.entryResults.forEach((r, i) => expect(r.balanced, `entry ${i + 1}: ${r.problem}`).toBe(true));
       if (s.lines) expect(missingLines(c, s.lines), `expected lines not found. The answer gave: ${describeEntries(c)}`).toEqual([]);
+      for (const bad of s.mustNot ?? []) expect(missingLines(c, [bad]), `wrong treatment found: ${bad.side} ${bad.type} ${bad.amount}. The answer gave: ${describeEntries(c)}`).toHaveLength(1);
       if (s.needsAccountant) expect(a.needsAccountant, "should say to check with the accountant").toBeTruthy();
       // A menu path counts as confirmed only with a non-web source behind it.
       for (const step of c.steps.filter((x) => x.status === "confirmed" && x.menuPath)) {
