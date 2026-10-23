@@ -205,6 +205,7 @@ Amounts in RM unless stated. "Expected" lists the entry the answer must contain 
 5. **Bad debt write-off.** A customer owes RM3,000 and has closed down; no allowance was made earlier.
    - Dr Bad debts (expense) 3,000 / Cr Debtor 3,000.
    - Mention tax deductibility needs the accountant (`needsAccountant`).
+   - Decided 23 Oct 2026: asking first (which year, whether it is closed or audited, any part payment) is also acceptable.
 6. **Contra: a customer who is also a supplier.** They owe us RM5,000; we owe them RM3,000; offset.
    - Dr Creditor (liability) 3,000 / Cr Debtor (asset) 3,000.
 7. **Supplier deposit, then the purchase invoice.** Paid a RM2,000 deposit; later received a RM8,000 invoice; deposit applied.

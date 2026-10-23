@@ -55,8 +55,9 @@ export const SCENARIOS: EvalScenario[] = [
     id: 5,
     name: "Bad debt write-off",
     message: "A customer owes RM3,000 and has closed down; we will never collect it. No allowance for doubtful debts was made earlier. How do we write it off?",
-    needsAccountant: true,
-    lines: [dr("expense", 3000), cr("asset", 3000)],
+    // Decided with the user (23 Oct 2026): asking first (which year, closed or audited, any part payment) is fine.
+    // Once answered, the entry is Dr Bad debts (expense) 3,000 / Cr the customer 3,000, flagged for the accountant.
+    mustAsk: true,
   },
   {
     id: 6,
