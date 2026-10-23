@@ -1,5 +1,6 @@
 import { modelAnswerSchema, type CheckedAnswer } from "@/lib/accountant/core/answer";
 import { unmask, type MaskMap } from "@/lib/accountant/core/mask";
+import type { Json } from "@/lib/supabase/database.types";
 
 /** Pure helpers for saved Accountant chats (no browser or database access, so they're unit-testable). */
 
@@ -56,4 +57,15 @@ export function askErrorMessage(status: number, body: unknown): string {
   if (b.error === "mask_too_large") return "This chat has too many hidden names and numbers to continue. Please start a new chat.";
   if (status === 400) return "Write the scenario in up to 4,000 characters.";
   return "Couldn't get an answer just now. Please try again.";
+}
+
+/**
+ * The question and answer rows for one turn, saved in a single insert. Both list every column: in a multi-row
+ * insert a column one row leaves out is sent as null, not as its default.
+ */
+export function turnRows(chatId: string, question: string, answer: CheckedAnswer) {
+  return [
+    { chat_id: chatId, role: "user", content: question, answer: null },
+    { chat_id: chatId, role: "assistant", content: "", answer: answer as unknown as Json },
+  ];
 }

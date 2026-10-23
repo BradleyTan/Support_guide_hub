@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CheckedAnswer, ModelAnswer } from "@/lib/accountant/core/answer";
-import { askErrorMessage, chatTitle, historyForGroq, rowToMessage, unmaskAnswer, type ChatMessage } from "@/lib/accountant/chat";
+import { askErrorMessage, chatTitle, historyForGroq, rowToMessage, turnRows, unmaskAnswer, type ChatMessage } from "@/lib/accountant/chat";
 import { answerToGuideInput } from "@/lib/accountant/to-guide";
 import { guideInputSchema } from "@/lib/guide-schema";
 
@@ -111,5 +111,17 @@ describe("unmaskAnswer", () => {
     expect(out.customerReply).toBe('Hi Lee "Best" Trading Sdn Bhd');
     expect(out.answer.entries[0].lines[2].account).toBe('Trade debtor - Lee "Best" Trading Sdn Bhd');
     expect(out.entryResults).toEqual([{ balanced: true, problem: null }]);
+  });
+});
+
+describe("turnRows", () => {
+  it("gives both rows the same columns, so a two-row insert never sends a missing column as null", () => {
+    const rows = turnRows("00000000-0000-4000-8000-000000000001", "Question?", checked());
+    expect(rows).toHaveLength(2);
+    expect(Object.keys(rows[0]).sort()).toEqual(Object.keys(rows[1]).sort());
+    for (const r of rows) for (const v of Object.values(r)) expect(v).not.toBeUndefined();
+    expect(rows[0]).toMatchObject({ role: "user", content: "Question?", answer: null });
+    expect(rows[1]).toMatchObject({ role: "assistant", content: "" });
+    expect(rows[1].answer).not.toBeNull();
   });
 });

@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { chatTitle, readAnswer } from "@/lib/accountant/chat";
-import type { Json } from "@/lib/supabase/database.types";
+import { chatTitle, readAnswer, turnRows } from "@/lib/accountant/chat";
 
 /** Accountant chat. Every call runs as the signed-in user, so Row Level Security applies. */
 
@@ -51,10 +50,7 @@ export async function saveTurn(input: { chatId: string | null; userText: string;
   // Question and answer in one insert, so a turn is saved whole or not at all (getChat lists the question first).
   const { data: saved, error } = await sb
     .from("accountant_messages")
-    .insert([
-      { chat_id: chatId, role: "user", content: text.data },
-      { chat_id: chatId, role: "assistant", answer: answer as unknown as Json },
-    ])
+    .insert(turnRows(chatId, text.data, answer))
     .select("id, role");
   const answerRow = saved?.find((m) => m.role === "assistant");
   if (error || !answerRow) {
