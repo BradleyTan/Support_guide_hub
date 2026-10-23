@@ -42,9 +42,9 @@ Chosen because its free plan allows work use (Vercel's free plan is non-commerci
 
 - [x] **You:** create a free API key at https://console.groq.com (API Keys → Create API Key). No card needed.
 - [x] **You:** Supabase → **Edge Functions → Secrets** → add `GROQ_API_KEY` with that key. Never paste it anywhere else.
-- [ ] **You:** Groq → **Settings → Data Controls** → turn on **Zero Data Retention**, so Groq keeps nothing you send.
+- [x] **You:** Groq → **Settings → Data Controls** → turn on **Zero Data Retention**, so Groq keeps nothing you send.
 - [ ] **You:** check in Groq whether **browser search** is charged on the free plan before turning on Settings → Accountant chat → “Use web search…” (off by default).
-- [ ] Run `npm run eval:accountant` (needs `E2E_EMAIL`/`E2E_PASSWORD` in `.env.local`) and read any failures; correct `evals/scenarios.ts` where your own treatment differs.
+- [x] Run `npm run eval:accountant` (needs `E2E_EMAIL`/`E2E_PASSWORD` in `.env.local`) and read any failures; correct `evals/scenarios.ts` where your own treatment differs.
 
 ## Security and data
 
