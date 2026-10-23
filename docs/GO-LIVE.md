@@ -4,20 +4,20 @@ Work through this before relying on the app for real client work. Items marked *
 
 ## Email (Supabase Auth)
 
-- [ ] **You:** set up custom SMTP in Supabase → **Authentication → Emails → SMTP Settings**, using one of:
+- [x] **You:** set up custom SMTP in Supabase → **Authentication → Emails → SMTP Settings**, using one of:
   - **Gmail** with an App password (needs 2-step verification on the Google account), or
   - **Resend** (free plan), or
   - **Brevo** (free plan).
 
   Why: the built-in sender allows only a few emails per hour for the whole project, so sign-up confirmations and password resets get blocked ("Too many emails sent…"). With custom SMTP the limit starts at 30/hour and can be raised under Authentication → Rate Limits.
-- [ ] Send yourself a test on the live address: use **Forgot password?** once and confirm the email arrives and its link opens the live site (not localhost).
+- [x] Send yourself a test on the live address: use **Forgot password?** once and confirm the email arrives and its link opens the live site (not localhost).
 
 ## GitHub
 
 - [x] Private repo created: `BradleyTan/Support_guide_hub`.
-- [ ] **You:** Settings → Secrets and variables → Actions → **Variables**: add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (public values, the same as in `.env.local`).
+- [x] **You:** Settings → Secrets and variables → Actions → **Variables**: add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (public values, the same as in `.env.local`).
 - [ ] Optional, **You:** **Secrets**: `E2E_EMAIL` and `E2E_PASSWORD` of the **test account** (never your main account), so CI also runs the signed-in tests. Without them CI runs the signed-out tests only.
-- [ ] The **CI** check on the latest commit is green (Actions tab).
+- [x] The **CI** check on the latest commit is green (Actions tab).
 
 ## Hosting: Netlify (free plan)
 
