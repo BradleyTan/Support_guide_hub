@@ -176,8 +176,9 @@ Deno.serve(async (req: Request) => {
     let web: "used" | "failed" | "off" = "off";
     if (input.forceWeb || (settings?.chat_web_search && sources.filter((s) => s.checked).length < 2)) {
       // Masked again here too: the browser already hid names, but this call must never depend on that alone.
+      // Any refusal here (including "too large" or "busy": page text from the web can exceed the free per-minute
+      // limit on its own) only means no web source; the answer still comes from the user's own sources.
       const found = await webSource(key, model, autoMask(input.message, input.mask).text).catch((e) => {
-        if (e instanceof GroqError && e.status === 429) throw e;
         console.error("[ask-accountant] web search failed", e instanceof GroqError ? `${e.status} ${e.message}` : e);
         return null;
       });
