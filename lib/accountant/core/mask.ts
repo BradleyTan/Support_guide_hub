@@ -27,10 +27,18 @@ function placeholderFor(kind: Kind, value: string, map: MaskMap): string {
   return p;
 }
 
+/** Replaces whole-word occurrences only, so hiding "Tan" leaves "Tangible" alone. */
+function replaceWhole(text: string, value: string, placeholder: string): string {
+  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const before = /^[A-Za-z0-9]/.test(value) ? "(?<![A-Za-z0-9])" : "";
+  const after = /[A-Za-z0-9]$/.test(value) ? "(?![A-Za-z0-9])" : "";
+  return text.replace(new RegExp(before + escaped + after, "g"), () => placeholder);
+}
+
 /** Swaps values already in the map for their placeholders, longest first so "ABC Sdn Bhd" wins over "ABC". */
 function applyMap(text: string, map: MaskMap): string {
   const entries = Object.entries(map).sort((a, b) => b[1].length - a[1].length);
-  for (const [p, v] of entries) if (v) text = text.split(v).join(p);
+  for (const [p, v] of entries) if (v) text = replaceWhole(text, v, p);
   return text;
 }
 
@@ -49,7 +57,7 @@ export function hideSelection(text: string, value: string, map: MaskMap): { text
   const next = { ...map };
   // Store the real text: a selection may already contain placeholders, and unmask makes a single pass.
   const p = placeholderFor("HIDDEN", unmask(v, next), next);
-  return { text: text.split(v).join(p), map: next };
+  return { text: replaceWhole(text, v, p), map: next };
 }
 
 /** Puts the real values back. Unknown placeholders are left as they are. */

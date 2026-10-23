@@ -38,3 +38,16 @@ describe("buildMessages", () => {
     for (const phrase of [/at most 5/i, /source id/i, /customerMessage/i, /needsAccountant/i, /as of/i, /Malaysia/i]) expect(SYSTEM_PROMPT).toMatch(phrase);
   });
 });
+
+describe("placeholders the customer reply may use", () => {
+  it("lists only placeholders from the scenario and earlier turns, not from sources", () => {
+    const r = buildMessages({
+      history: [{ role: "user", content: "Earlier: ABC Trading paid" }],
+      message: "Now [COMPANY 1] wants a refund",
+      sources: [source("a", "Guide about XYZ Sdn Bhd")],
+      map: { "[COMPANY 1]": "Lee Trading Sdn Bhd" },
+    });
+    expect(r.replyPlaceholders.sort()).toEqual(["[COMPANY 1]", "[COMPANY 2]"]);
+    expect(Object.keys(r.map)).toContain("[COMPANY 3]");
+  });
+});

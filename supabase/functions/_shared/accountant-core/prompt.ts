@@ -1,7 +1,7 @@
 // Builds what Groq sees: the system prompt, earlier turns and the new scenario with numbered, masked sources.
 // Shared with the Edge Function.
 import type { Source, SourceKind } from "./answer.ts";
-import { autoMask, type MaskMap } from "./mask.ts";
+import { autoMask, PLACEHOLDER, type MaskMap } from "./mask.ts";
 
 const MAX_TOTAL = 9_000; // keeps one answer well inside Groq's free 8,000 tokens a minute
 const MAX_EACH = 2_500;
@@ -38,13 +38,19 @@ export function buildMessages(input: {
   message: string;
   sources: Source[];
   map: MaskMap;
-}): { messages: Message[]; sources: Source[]; map: MaskMap } {
+}): { messages: Message[]; sources: Source[]; map: MaskMap; replyPlaceholders: string[] } {
   let map = input.map;
   const mask = (t: string) => {
     const r = autoMask(t, map);
     map = r.map;
     return r.text;
   };
+
+  // The customer's own words first, so the placeholders the reply may use are only those in the scenario and
+  // earlier turns, never a name that came from a guide about someone else.
+  const history = input.history.map((h) => ({ role: h.role, content: mask(h.content) }));
+  const scenario = mask(input.message);
+  const replyPlaceholders = [...new Set([...history.map((h) => h.content), scenario].join("\n").match(PLACEHOLDER) ?? [])];
 
   const sources: Source[] = [];
   let left = MAX_TOTAL;
@@ -63,8 +69,8 @@ export function buildMessages(input: {
 
   const messages: Message[] = [
     { role: "system", content: SYSTEM_PROMPT },
-    ...input.history.map((h) => ({ role: h.role, content: mask(h.content) })),
-    { role: "user", content: `Scenario:\n${mask(input.message)}\n\nSources:\n${block}` },
+    ...history,
+    { role: "user", content: `Scenario:\n${scenario}\n\nSources:\n${block}` },
   ];
-  return { messages, sources, map };
+  return { messages, sources, map, replyPlaceholders };
 }

@@ -178,3 +178,22 @@ describe("checkAnswer", () => {
     expect(r.steps).toEqual([]);
   });
 });
+
+describe("minor fixes from the final review", () => {
+  it("an absurdly large amount never counts as balanced", () => {
+    const e = { date: null, description: "x", lines: [
+      { account: "A", accountType: "asset" as const, dr: 1e308, cr: null },
+      { account: "B", accountType: "asset" as const, dr: null, cr: 1e308 },
+    ] };
+    expect(checkEntry(e).balanced).toBe(false);
+  });
+
+  it("the customer reply may only use names from this customer's own scenario", () => {
+    const map = { "[COMPANY 1]": "This Customer Sdn Bhd", "[COMPANY 2]": "Other Customer Sdn Bhd" };
+    const a = { ...fixture(), customerMessage: "Hi [COMPANY 2], here is the fix." };
+    const r = checkAnswer(a, [], map, ["[COMPANY 1]"]);
+    expect(r.customerReply).toBeNull();
+    expect(r.flags).toContain("Customer reply had unknown placeholders");
+    expect(checkAnswer({ ...fixture(), customerMessage: "Hi [COMPANY 1]." }, [], map, ["[COMPANY 1]"]).customerReply).toContain("[COMPANY 1]");
+  });
+});

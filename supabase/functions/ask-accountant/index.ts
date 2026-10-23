@@ -8,7 +8,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { modelAnswerJsonSchema, parseAnswer, type Source } from "../_shared/accountant-core/answer.ts";
 import { checkAnswer } from "../_shared/accountant-core/checks.ts";
-import type { MaskMap } from "../_shared/accountant-core/mask.ts";
+import { autoMask, type MaskMap } from "../_shared/accountant-core/mask.ts";
 import { buildMessages } from "../_shared/accountant-core/prompt.ts";
 import { articleBody, htmlToText, isFetchableArticle, searchQuery, toGuideSource, toKnowledgeSources, toOfficialSource } from "../_shared/accountant-core/sources.ts";
 
@@ -172,7 +172,8 @@ Deno.serve(async (req: Request) => {
   try {
     const sources = await gatherSources(db, input.message);
     if (settings?.chat_web_search && sources.filter((s) => s.checked).length < 2) {
-      const web = await webSource(key, model, input.message).catch((e) => {
+      // Masked again here too: the browser already hid names, but this call must never depend on that alone.
+      const web = await webSource(key, model, autoMask(input.message, input.mask).text).catch((e) => {
         if (e instanceof GroqError && e.status === 429) throw e;
         return null; // the web step is optional
       });
@@ -202,7 +203,7 @@ Deno.serve(async (req: Request) => {
     if (!parsed.ok) parsed = await attempt(); // one retry
     if (!parsed.ok) return json({ error: "bad_answer", detail: parsed.error }, 502);
 
-    return json({ checked: checkAnswer(parsed.answer, built.sources, built.map), mask: built.map });
+    return json({ checked: checkAnswer(parsed.answer, built.sources, built.map, built.replyPlaceholders), mask: built.map });
   } catch (e) {
     if (e instanceof GroqError) {
       if (e.status === 429) return json({ error: "rate_limited", retryAfter: e.retryAfter }, 429, { "Retry-After": String(e.retryAfter) });

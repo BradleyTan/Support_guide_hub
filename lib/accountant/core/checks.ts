@@ -26,6 +26,7 @@ export function checkEntry(e: ModelEntry): { balanced: boolean; problem: string 
     if (hasDr === hasCr) return { balanced: false, problem: `"${l.account}" needs either a debit or a credit, not both or neither.` };
     const amount = (hasDr ? l.dr : l.cr) as number;
     if (!(toSen(amount) > 0)) return { balanced: false, problem: `"${l.account}" has an amount that isn't above zero.` };
+    if (!Number.isSafeInteger(toSen(amount))) return { balanced: false, problem: `"${l.account}" has an amount too large to check.` };
     if (hasDr) dr += toSen(amount);
     else cr += toSen(amount);
   }
@@ -83,7 +84,8 @@ export function checkStep(step: ModelStep, sources: Source[]): CheckedStep {
   return { ...step, status: "not-confirmed" };
 }
 
-export function buildCustomerReply(a: ModelAnswer, steps: CheckedStep[], entries: { balanced: boolean }[], map: MaskMap): { reply: string | null; flags: string[] } {
+/** `allowed`: placeholders the reply may contain (those in the customer's own scenario); defaults to the whole map. */
+export function buildCustomerReply(a: ModelAnswer, steps: CheckedStep[], entries: { balanced: boolean }[], map: MaskMap, allowed: string[] = Object.keys(map)): { reply: string | null; flags: string[] } {
   if (a.needsMoreInfo) return { reply: null, flags: [] };
   const flags: string[] = [];
 
@@ -115,7 +117,7 @@ export function buildCustomerReply(a: ModelAnswer, steps: CheckedStep[], entries
 
   const reply = parts.filter((p) => p.trim()).join("\n\n");
   const tokens = reply.match(/\[[^\]\n]{1,40}\]/g) ?? [];
-  const known = new Set(Object.keys(map));
+  const known = new Set(allowed.filter((p) => p in map));
   if (tokens.some((t) => !known.has(t) || !new RegExp(`^${PLACEHOLDER.source}$`).test(t))) {
     flags.push(UNKNOWN_PLACEHOLDERS);
     return { reply: null, flags };
@@ -123,14 +125,14 @@ export function buildCustomerReply(a: ModelAnswer, steps: CheckedStep[], entries
   return { reply, flags };
 }
 
-export function checkAnswer(a: ModelAnswer, sources: Source[], map: MaskMap): CheckedAnswer {
+export function checkAnswer(a: ModelAnswer, sources: Source[], map: MaskMap, allowed: string[] = Object.keys(map)): CheckedAnswer {
   const publicSources = sources.map((s) => ({ id: s.id, kind: s.kind, title: s.title, url: s.url, platform: s.platform, checked: s.checked }));
   if (a.needsMoreInfo) {
     return { answer: { ...a, entries: [], steps: [], customerMessage: "" }, entryResults: [], steps: [], customerReply: null, sources: publicSources, flags: [] };
   }
   const entryResults = a.entries.map(checkEntry);
   const steps = a.steps.map((s) => checkStep(s, sources));
-  const { reply, flags } = buildCustomerReply(a, steps, entryResults, map);
+  const { reply, flags } = buildCustomerReply(a, steps, entryResults, map, allowed);
   entryResults.forEach((r, i) => !r.balanced && flags.push(`Entry ${i + 1}: ${UNBALANCED_LABEL}`));
   return { answer: a, entryResults, steps, customerReply: reply, sources: publicSources, flags };
 }

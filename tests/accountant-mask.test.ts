@@ -77,3 +77,11 @@ describe("unmask", () => {
     expect(unmask("[COMPANY 10] then [COMPANY 1]", map)).toBe("Co10 then Co1");
   });
 });
+
+describe("whole words only", () => {
+  it("a short hidden name is not replaced inside longer words", () => {
+    const { text, map } = hideSelection("Tan bought a Tangible asset. Ask Tan.", "Tan", {});
+    expect(text).toBe("[HIDDEN 1] bought a Tangible asset. Ask [HIDDEN 1].");
+    expect(autoMask("Tangible fixed assets for Tan", map).text).toBe("Tangible fixed assets for [HIDDEN 1]");
+  });
+});
