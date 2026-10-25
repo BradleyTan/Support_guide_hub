@@ -142,6 +142,7 @@ async function webSource(key: string, model: string, message: string): Promise<S
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
+  const startedAt = Date.now();
 
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "Sign in required" }, 401);
@@ -197,11 +198,19 @@ Deno.serve(async (req: Request) => {
     };
     // Groq checks the JSON against the schema itself and answers 400 when the model's output doesn't fit;
     // that, like output our own check rejects, is a bad answer worth one more try.
-    const attempt = async () => {
+    // A web search can use most of the free per-minute tokens, so the answer straight after it may be told "busy".
+    // Wait once, as long as Groq asks (up to a minute, within the function's time limit), instead of failing.
+    let waited = false;
+    const attempt = async (): Promise<ReturnType<typeof parseAnswer>> => {
       try {
         return parseAnswer(await groq(key, request));
       } catch (e) {
         if (e instanceof GroqError && e.status === 400 && /schema|failed_generation|json_validate/i.test(e.message)) return { ok: false as const, error: "Groq's output didn't match the schema." };
+        if (e instanceof GroqError && e.status === 429 && !waited && e.retryAfter <= 60 && Date.now() - startedAt < 40_000) {
+          waited = true;
+          await new Promise((r) => setTimeout(r, (e.retryAfter + 1) * 1000));
+          return attempt();
+        }
         throw e;
       }
     };
