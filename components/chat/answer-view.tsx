@@ -98,6 +98,37 @@ function Steps({ steps }: { steps: CheckedStep[] }) {
   );
 }
 
+/** Where the answer came from, with kind labels; shown on full answers and on questions-first ones. */
+function SourceList({ c }: { c: CheckedAnswer }) {
+  return (
+    <Block title="Sources">
+      {c.sources.length ? (
+        <ul className="space-y-1 text-sm">
+          {c.sources.map((s) => (
+            <li key={s.id} className="flex flex-wrap items-baseline gap-1.5 break-words">
+              <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{KIND_LABEL[s.kind]}</span>
+              {s.url.startsWith("/") ? (
+                <Link href={s.url} className="text-primary hover:underline">
+                  {s.title}
+                </Link>
+              ) : s.url ? (
+                <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-start gap-1 text-primary hover:underline">
+                  {s.title} <ExternalLink className="mt-1 size-3 shrink-0" />
+                </a>
+              ) : (
+                <span>{s.title}</span>
+              )}
+              {!s.checked && s.kind !== "web" && <span className="text-xs text-muted-foreground">(not checked)</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">None of your guides, articles or the help centre matched, so this is general accounting knowledge.</p>
+      )}
+    </Block>
+  );
+}
+
 /** onSearchWeb: asks the same question again with web search; left out while another answer is on its way. */
 export function AnswerView({ message, onSearchWeb }: { message: ChatMessage; onSearchWeb?: () => void }) {
   const router = useRouter();
@@ -144,6 +175,7 @@ export function AnswerView({ message, onSearchWeb }: { message: ChatMessage; onS
             ))}
           </ol>
           <p className="text-xs text-muted-foreground">Answer them below and I’ll work it out.</p>
+          <SourceList c={c} />
         </Block>
       ) : (
         <>
@@ -185,31 +217,7 @@ export function AnswerView({ message, onSearchWeb }: { message: ChatMessage; onS
                 </ul>
               </Block>
             )}
-            <Block title="Sources">
-              {c.sources.length ? (
-                <ul className="space-y-1 text-sm">
-                  {c.sources.map((s) => (
-                    <li key={s.id} className="flex flex-wrap items-baseline gap-1.5 break-words">
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{KIND_LABEL[s.kind]}</span>
-                      {s.url.startsWith("/") ? (
-                        <Link href={s.url} className="text-primary hover:underline">
-                          {s.title}
-                        </Link>
-                      ) : s.url ? (
-                        <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-start gap-1 text-primary hover:underline">
-                          {s.title} <ExternalLink className="mt-1 size-3 shrink-0" />
-                        </a>
-                      ) : (
-                        <span>{s.title}</span>
-                      )}
-                      {!s.checked && s.kind !== "web" && <span className="text-xs text-muted-foreground">(not checked)</span>}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">None of your guides, articles or the help centre matched, so this is general accounting knowledge.</p>
-              )}
-            </Block>
+            <SourceList c={c} />
           </section>
 
           <section aria-label="For the customer" className="space-y-3 rounded-xl border-2 border-primary/30 bg-primary/[0.04] p-4">

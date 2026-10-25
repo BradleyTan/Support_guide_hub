@@ -135,6 +135,18 @@ test.describe("read-only", () => {
     await expect(page.getByText("Web search didn't work")).toBeVisible();
   });
 
+  test("a questions-first answer still lists its sources, including a Web one", async ({ page }) => {
+    await preview(page, "Goods from opening stock went back to the supplier for rework.");
+    const withWeb = { ...questionsOnly, sources: [{ id: "web", kind: "web", title: "Web search", url: "https://www.hasil.gov.my/", platform: null, checked: false }] };
+    await stubAsk(page, (body) => ({ status: 200, json: { checked: withWeb, mask: body.mask, web: "used" } }));
+    await page.route("**/chat", (route) => (route.request().method() === "POST" && route.request().headers()["next-action"] ? route.fulfill({ status: 500, body: "" }) : route.continue()));
+    await page.getByRole("button", { name: "Send" }).click();
+    const answer = page.getByRole("article", { name: "Answer" });
+    await expect(answer.getByText("A few questions first")).toBeVisible();
+    await expect(answer.getByRole("heading", { name: "Sources" })).toBeVisible();
+    await expect(answer.getByText("Web", { exact: true })).toBeVisible();
+  });
+
   test("a missing Groq key is explained", async ({ page }) => {
     await preview(page, "Customer short-paid RM10.");
     await stubAsk(page, () => ({ status: 503, json: { error: "not_configured" } }));
