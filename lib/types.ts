@@ -8,6 +8,9 @@ export const PRODUCTS = [
   "AutoCount Payroll",
   "AutoCount POS",
   "AutoCount Account Book",
+  // Remote-access products used to run AutoCount from other sites.
+  "Winflector",
+  "GO-Global",
 ] as const;
 export type Product = (typeof PRODUCTS)[number];
 

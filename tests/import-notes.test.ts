@@ -102,3 +102,12 @@ describe("pdfItemsToText", () => {
     expect(parseNotes(text).map((e) => e.steps)).toEqual(["check port", ""]);
   });
 });
+
+describe("notes for remote-access products", () => {
+  it("reads Winflector and GO-Global as the product in an Issue line", () => {
+    const [w] = parseNotes("Issue: Winflector - Printer not redirected\nSolution: Install the client printer driver");
+    expect(w).toMatchObject({ product: "Winflector", title: "Printer not redirected" });
+    const [g] = parseNotes("Issue: Go-Global - Session disconnects\nSolution: Raise the idle timeout");
+    expect(g).toMatchObject({ product: "Go-Global", title: "Session disconnects" });
+  });
+});

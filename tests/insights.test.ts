@@ -45,6 +45,8 @@ describe("libraryHealth", () => {
       { product: "AutoCount Payroll", count: 2, verified: 0 },
       { product: "AutoCount POS", count: 0, verified: 0 },
       { product: "AutoCount Account Book", count: 0, verified: 0 },
+      { product: "Winflector", count: 0, verified: 0 },
+      { product: "GO-Global", count: 0, verified: 0 },
     ]);
   });
 

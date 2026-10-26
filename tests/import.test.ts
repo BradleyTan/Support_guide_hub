@@ -150,3 +150,18 @@ describe("platform column", () => {
     expect(rows[2].problems).toContain("Unknown platform “Mobile” (use Desktop, Cloud or Both)");
   });
 });
+
+describe("remote-access products", () => {
+  it("recognises Winflector and GO-Global however they are written", () => {
+    expect(normalizeProduct("Winflector")).toBe("Winflector");
+    expect(normalizeProduct("winflector server")).toBe("Winflector");
+    expect(normalizeProduct("GO-Global")).toBe("GO-Global");
+    expect(normalizeProduct("Go-Global")).toBe("GO-Global");
+    expect(normalizeProduct("go global")).toBe("GO-Global");
+    expect(normalizeProduct("GoGlobal")).toBe("GO-Global");
+  });
+
+  it("does not mistake other words for them", () => {
+    expect(normalizeProduct("global settings")).toBeNull();
+  });
+});

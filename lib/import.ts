@@ -63,6 +63,8 @@ export function autoMapColumns(headers: string[]): Mapping {
 
 const PRODUCT_ALIASES: [RegExp, Product][] = [
   [/account\s*book/i, "AutoCount Account Book"],
+  [/winflector/i, "Winflector"],
+  [/\bgo[\s-]?global\b/i, "GO-Global"],
   [/payroll|hrms|hr\b/i, "AutoCount Payroll"],
   [/\bpos\b|point\s*of\s*sale/i, "AutoCount POS"],
   [/accounting|\bac\b|\baca\b/i, "AutoCount Accounting"],

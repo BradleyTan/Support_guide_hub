@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { loadSampleData } from "@/app/(app)/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookText, Calculator, ChartColumn, FilePlus2, Landmark, Loader2, NotebookText, ScanBarcode, Search, Sparkles, Upload, Wallet, type LucideIcon } from "lucide-react";
+import { BookText, Calculator, ChartColumn, FilePlus2, Globe, Landmark, Loader2, MonitorSmartphone, NotebookText, ScanBarcode, Search, Sparkles, Upload, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ const productIcon: Record<Product, LucideIcon> = {
   "AutoCount Payroll": Wallet,
   "AutoCount POS": ScanBarcode,
   "AutoCount Account Book": NotebookText,
+  Winflector: MonitorSmartphone,
+  "GO-Global": Globe,
 };
 
 const exampleSearches = ["SQL Server not found", "PCB bonus", "e-Invoice TIN", "bank recon difference"];

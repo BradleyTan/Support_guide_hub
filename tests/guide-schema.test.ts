@@ -78,3 +78,9 @@ describe("guide platform", () => {
     expect(inputToRow(guideInputSchema.parse({ ...valid, platform: "cloud" })).platform).toBe("cloud");
   });
 });
+
+describe("products", () => {
+  it("accepts Winflector and GO-Global guides", () => {
+    for (const product of ["Winflector", "GO-Global"]) expect(guideInputSchema.safeParse({ ...valid, product }).success).toBe(true);
+  });
+});
