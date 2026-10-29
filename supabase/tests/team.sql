@@ -208,6 +208,55 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- who changed what can't be spoofed; created_at can't be rewritten
+-- ---------------------------------------------------------------------------
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e2","role":"authenticated"}', true);
+do $$
+declare editor uuid;
+begin
+  insert into public.templates (id, kind, title, body, updated_by) values
+    ('00000000-0000-4000-8000-0000000000fb', 'Reply', 'Spoofed editor', 'x', '00000000-0000-4000-8000-0000000000e1');
+  select updated_by into editor from public.templates where id = '00000000-0000-4000-8000-0000000000fb';
+  if editor is distinct from '00000000-0000-4000-8000-0000000000e2' then raise exception 'insert kept a spoofed updated_by: %', editor; end if;
+  insert into public.knowledge_articles (id, title, category, tell_customer, updated_by) values
+    ('00000000-0000-4000-8000-0000000000bb', 'Spoofed editor article', 'Basics', 'x', '00000000-0000-4000-8000-0000000000e1');
+  select updated_by into editor from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000bb';
+  if editor is distinct from '00000000-0000-4000-8000-0000000000e2' then raise exception 'article insert kept a spoofed updated_by: %', editor; end if;
+  update public.guides set updated_by = '00000000-0000-4000-8000-0000000000e1' where id = '00000000-0000-4000-8000-0000000000a2';
+  select updated_by into editor from public.guides where id = '00000000-0000-4000-8000-0000000000a2';
+  if editor is distinct from '00000000-0000-4000-8000-0000000000e2' then raise exception 'update kept a spoofed updated_by: %', editor; end if;
+  update public.sops set updated_by = '00000000-0000-4000-8000-0000000000e1' where id = '00000000-0000-4000-8000-0000000000d1';
+  select updated_by into editor from public.sops where id = '00000000-0000-4000-8000-0000000000d1';
+  if editor is distinct from '00000000-0000-4000-8000-0000000000e2' then raise exception 'SOP update kept a spoofed updated_by: %', editor; end if;
+
+  begin update public.guides set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000a1'; raise exception 'member rewrote a guide''s created_at';
+  exception when insufficient_privilege then null; end;
+  begin update public.knowledge_articles set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000b1'; raise exception 'member rewrote an article''s created_at';
+  exception when insufficient_privilege then null; end;
+  begin update public.analyses set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000c1'; raise exception 'member rewrote an analysis''s created_at';
+  exception when insufficient_privilege then null; end;
+  begin update public.sops set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000d1'; raise exception 'member rewrote an SOP''s created_at';
+  exception when insufficient_privilege then null; end;
+  begin update public.templates set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000f1'; raise exception 'member rewrote a template''s created_at';
+  exception when insufficient_privilege then null; end;
+  begin update public.guide_attachments set created_at = now() - interval '9 years' where guide_id = '00000000-0000-4000-8000-0000000000a1'; raise exception 'member rewrote an attachment''s created_at';
+  exception when insufficient_privilege then null; end;
+end $$;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}', true);
+do $$
+declare editor uuid;
+begin
+  -- Opening a guide is not an edit: the editor stays the member.
+  perform public.increment_guide_uses('00000000-0000-4000-8000-0000000000a2');
+  select updated_by into editor from public.guides where id = '00000000-0000-4000-8000-0000000000a2';
+  if editor is distinct from '00000000-0000-4000-8000-0000000000e2' then raise exception 'opening a guide changed updated_by to %', editor; end if;
+  begin update public.guides set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000a1'; raise exception 'owner rewrote a guide''s created_at';
+  exception when insufficient_privilege then null; end;
+  begin update public.guide_attachments set created_at = now() - interval '9 years' where guide_id = '00000000-0000-4000-8000-0000000000a1'; raise exception 'owner rewrote an attachment''s created_at';
+  exception when insufficient_privilege then null; end;
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- member edit un-verifies
 -- ---------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}', true);

@@ -180,7 +180,9 @@ alter table public.knowledge_articles enable trigger knowledge_articles_updated_
 alter table public.sops enable trigger sops_updated_at;
 alter table public.templates enable trigger templates_updated_at;
 
--- The editor is recorded when the row's content changes (not for use counters or search vectors).
+-- The editor is always the signed-in caller, never a value they send: a new row records its creator, and an update
+-- records the caller when the content changes or when they try to set updated_by themselves. Use counters and
+-- search vectors alone (opening a guide, the background embedding fill) keep the previous editor.
 create or replace function public.set_updated_by()
 returns trigger
 language plpgsql
@@ -189,21 +191,35 @@ as $$
 declare
   skip constant text[] := '{uses,embedding,fts,updated_at,updated_by}';
 begin
-  if (select auth.uid()) is not null and (to_jsonb(old) - skip) is distinct from (to_jsonb(new) - skip) then
+  if (select auth.uid()) is null then
+    return new;
+  end if;
+  -- tg_argv[0] = 'always': the trigger fired because the statement names updated_by itself.
+  if tg_op = 'INSERT' or tg_argv[0] = 'always'
+     or (to_jsonb(old) - skip) is distinct from (to_jsonb(new) - skip) then
     new.updated_by := (select auth.uid());
   end if;
   return new;
 end;
 $$;
 
-create trigger guides_set_updated_by before update on public.guides
+create trigger guides_set_updated_by before insert or update on public.guides
   for each row execute function public.set_updated_by();
-create trigger knowledge_articles_set_updated_by before update on public.knowledge_articles
+create trigger knowledge_articles_set_updated_by before insert or update on public.knowledge_articles
   for each row execute function public.set_updated_by();
-create trigger sops_set_updated_by before update on public.sops
+create trigger sops_set_updated_by before insert or update on public.sops
   for each row execute function public.set_updated_by();
-create trigger templates_set_updated_by before update on public.templates
+create trigger templates_set_updated_by before insert or update on public.templates
   for each row execute function public.set_updated_by();
+-- Any update that names updated_by (even with its current value) records the caller instead.
+create trigger guides_stamp_updated_by before update of updated_by on public.guides
+  for each row execute function public.set_updated_by('always');
+create trigger knowledge_articles_stamp_updated_by before update of updated_by on public.knowledge_articles
+  for each row execute function public.set_updated_by('always');
+create trigger sops_stamp_updated_by before update of updated_by on public.sops
+  for each row execute function public.set_updated_by('always');
+create trigger templates_stamp_updated_by before update of updated_by on public.templates
+  for each row execute function public.set_updated_by('always');
 
 -- ---------------------------------------------------------------------------
 -- Owner-only columns. RLS can't see which column changed, so triggers enforce these.
@@ -211,7 +227,7 @@ create trigger templates_set_updated_by before update on public.templates
 -- anon has no row access at all, so only privileged roles reach these rows without auth.uid().
 -- ---------------------------------------------------------------------------
 
--- Nobody reassigns a row's author; only the owner moves rows into or out of the bin.
+-- Nobody reassigns a row's author or rewrites when it was created; only the owner moves rows into or out of the bin.
 create or replace function public.guard_owner_columns()
 returns trigger
 language plpgsql
@@ -225,6 +241,9 @@ begin
   if tg_op = 'UPDATE' and new.user_id is distinct from old.user_id
      and not (new.user_id is null and pg_trigger_depth() > 1) then
     raise exception 'The author of a row can''t be changed' using errcode = 'insufficient_privilege';
+  end if;
+  if tg_op = 'UPDATE' and new.created_at is distinct from old.created_at then
+    raise exception 'When a row was created can''t be changed' using errcode = 'insufficient_privilege';
   end if;
   if (select public.is_owner()) then
     return new;
@@ -250,7 +269,7 @@ create trigger sops_guard_owner_columns before insert or update on public.sops
   for each row execute function public.guard_owner_columns();
 create trigger templates_guard_owner_columns before insert or update on public.templates
   for each row execute function public.guard_owner_columns();
--- guide_attachments has no bin, but members may update it, so its author is protected the same way.
+-- guide_attachments has no bin, but members may update it, so its author and created_at are protected the same way.
 create trigger guide_attachments_guard_owner_columns before update on public.guide_attachments
   for each row execute function public.guard_owner_columns();
 
