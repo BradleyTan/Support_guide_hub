@@ -69,6 +69,8 @@ export interface Guide {
   createdAt: string;
   updatedAt: string;
   revisions: Revision[];
+  /** Who last edited it, when that is known ("a teammate" if the name can't be read). */
+  updatedByName?: string;
 }
 
 /** An official AutoCount page saved to a guide from Search. */

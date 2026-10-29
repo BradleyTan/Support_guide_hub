@@ -1,6 +1,5 @@
 import { expect, test } from "./fixtures";
-import { createClient } from "@supabase/supabase-js";
-import { allowWrites, hasTestAccount } from "./helpers";
+import { allowWrites, e2eCleanup, hasTestAccount } from "./helpers";
 
 test.skip(!hasTestAccount, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
 
@@ -51,16 +50,9 @@ test.describe("saving (writes data)", () => {
   test.skip(({ isMobile }) => isMobile, "write tests run once, on desktop");
   test.skip(!allowWrites, "Set E2E_ALLOW_WRITES=1 to run tests that save data");
 
-  const created: string[] = []; // analysis codes made by this run, removed afterwards
-
   test.afterAll(async () => {
     if (!allowWrites) return;
-    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
-    await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
-    if (created.length) await sb.from("analyses").delete().in("code", created);
-    await sb.from("analyses").delete().like("title", "[e2e]%");
-    await sb.from("guides").delete().like("title", "[e2e]%");
-    await sb.auth.signOut({ scope: "local" });
+    await e2eCleanup();
   });
 
   test("save a calculation to history and reopen it in the calculator", async ({ page }) => {
@@ -70,7 +62,6 @@ test.describe("saving (writes data)", () => {
     const toast = page.getByText(/^Saved as AN-\d+$/);
     await expect(toast).toBeVisible();
     const code = (await toast.textContent())!.replace("Saved as ", "");
-    created.push(code);
 
     await page.getByRole("tab", { name: /History/ }).click();
     await page.getByRole("button", { name: new RegExp(code) }).click();
@@ -79,7 +70,7 @@ test.describe("saving (writes data)", () => {
     await expect(page.getByLabel("Asset")).toHaveValue("[e2e] laptop");
   });
 
-  test("build your own entry, turn it into a guide, then delete the analysis", async ({ page }) => {
+  test("build your own entry, turn it into a guide, a member can't delete it", async ({ page }) => {
     await page.goto("/analyst?manual=1");
     await page.getByLabel("Title").fill(`[e2e] ${Date.now()} reclassify deposit`);
     await page.getByLabel("Line 1 account").fill("Rental deposit");
@@ -89,7 +80,6 @@ test.describe("saving (writes data)", () => {
     await page.getByRole("button", { name: "Save to history" }).click();
     await expect(page).toHaveURL(/analysis=AN-\d+/);
     const code = new URL(page.url()).searchParams.get("analysis")!;
-    created.push(code);
 
     await page.getByRole("button", { name: "Save as guide" }).click();
     await expect(page).toHaveURL(/\/guides\/G-\d+$/);
@@ -97,8 +87,7 @@ test.describe("saving (writes data)", () => {
     await expect(page.getByText(/Dr Rental deposit 3000\.00/)).toBeVisible();
 
     await page.goto(`/analyst?analysis=${code}`);
-    page.once("dialog", (d) => d.accept());
-    await page.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByText(`${code} deleted`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy for Claude" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
   });
 });

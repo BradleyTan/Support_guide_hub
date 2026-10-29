@@ -22,3 +22,7 @@ export function getMembershipStatusCopy(m: Membership | null, ownerName: string)
     body: `${ownerName} needs to approve your account before you can use the Support Desk. Refresh this page once you've been told you're in.`,
   };
 }
+
+/** Error copy returned by server actions when the caller fails the membership gate. */
+export const MEMBER_ONLY_ERROR = "Only approved team members can do this.";
+export const OWNER_ONLY_ERROR = "Only the owner can do this.";

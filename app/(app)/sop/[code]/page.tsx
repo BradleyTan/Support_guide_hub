@@ -16,6 +16,7 @@ export default async function SopEditPage({ params }: PageProps<"/sop/[code]">) 
       code={sop.id}
       initial={{ guideCode: sop.guideCode, title: sop.title, version: sop.version, purpose: sop.purpose, scope: sop.scope, steps: sop.steps, checks: sop.checks }}
       images={images}
+      updatedByName={sop.updatedByName}
     />
   );
 }

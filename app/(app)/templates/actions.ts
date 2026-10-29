@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { requireMember, requireOwner } from "@/lib/team";
+import { MEMBER_ONLY_ERROR, OWNER_ONLY_ERROR } from "@/lib/team-rules";
 import { templateInputSchema } from "@/lib/templates";
 
 /** Templates & snippets. Every call runs as the signed-in user, so RLS applies. */
@@ -10,10 +11,10 @@ import { templateInputSchema } from "@/lib/templates";
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string; fieldErrors?: Partial<Record<"kind" | "title" | "body" | "tags", string>> };
 
 const idSchema = z.uuid();
-const SESSION_ENDED = "Your session has ended. Please sign in again.";
+const SESSION_ENDED = MEMBER_ONLY_ERROR;
 
-async function session() {
-  return (await getUser()) ? await createClient() : null;
+async function session(level: "member" | "owner" = "member") {
+  return level === "owner" ? await requireOwner() : await requireMember();
 }
 
 function refresh() {
@@ -58,8 +59,8 @@ export async function updateTemplate(id: string, input: unknown): Promise<Result
 
 export async function deleteTemplate(id: string): Promise<Result> {
   if (!idSchema.safeParse(id).success) return { ok: false, error: "This template no longer exists." };
-  const sb = await session();
-  if (!sb) return { ok: false, error: SESSION_ENDED };
+  const sb = await session("owner");
+  if (!sb) return { ok: false, error: OWNER_ONLY_ERROR };
   const { error } = await sb.from("templates").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) return { ok: false, error: "Couldn’t delete the template. Please try again." };
   refresh();

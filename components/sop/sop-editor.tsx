@@ -11,14 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/shared/page-header";
+import { useIsOwner } from "@/components/shell/team-context";
 import { createSop, deleteSop, updateSop } from "@/app/(app)/sop/actions";
 import { move, type SopImage, type SopInput, type SopStep } from "@/lib/sop";
 
 const NO_IMAGE = "none";
 type Errors = Partial<Record<keyof SopInput, string>>;
 
-export function SopEditor({ code, initial, images }: { code?: string; initial: SopInput; images: SopImage[] }) {
+export function SopEditor({ code, initial, images, updatedByName }: { code?: string; initial: SopInput; images: SopImage[]; updatedByName?: string }) {
   const router = useRouter();
+  const isOwner = useIsOwner();
   const [title, setTitle] = useState(initial.title);
   const [version, setVersion] = useState(initial.version);
   const [purpose, setPurpose] = useState(initial.purpose);
@@ -202,7 +204,8 @@ export function SopEditor({ code, initial, images }: { code?: string; initial: S
             {saving ? <Loader2 className="animate-spin" /> : <Save />} {code ? "Save" : "Save SOP"}
           </Button>
           {dirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-          {code && (
+          {updatedByName && <span className="text-xs text-muted-foreground">Last edited by {updatedByName}</span>}
+          {code && isOwner && (
             <Button variant="ghost" className="ml-auto text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
               <Trash2 /> Delete SOP
             </Button>

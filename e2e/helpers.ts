@@ -1,4 +1,5 @@
 import { expect, type Browser, type Page } from "@playwright/test";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { waitForApp } from "./fixtures";
 
 export const AUTH_FILE = "e2e/.auth/user.json";
@@ -27,4 +28,28 @@ export async function signInFresh(page: Page) {
 /** A brand-new, signed-out browser context (e.g. a second device). */
 export async function freshContext(browser: Browser) {
   return browser.newContext({ storageState: { cookies: [], origins: [] } });
+}
+
+/** Runs `work` signed in as the test member with a throwaway client, then signs that client out (local only). */
+export async function withTestClient(work: (sb: SupabaseClient) => Promise<void>) {
+  const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
+  const { error } = await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
+  if (error) throw new Error("The test account couldn't sign in for cleanup.");
+  try {
+    await work(sb);
+  } finally {
+    await sb.auth.signOut({ scope: "local" });
+  }
+}
+
+/**
+ * Removes everything the test member created with an "[e2e]" title, plus its search log. Members can't DELETE shared rows
+ * under RLS, so this goes through the e2e_cleanup() database function, which only the test account can call.
+ */
+export async function e2eCleanup(extra?: (sb: SupabaseClient) => Promise<void>) {
+  await withTestClient(async (sb) => {
+    const { error } = await sb.rpc("e2e_cleanup");
+    if (error) throw new Error(`e2e_cleanup failed: ${error.message}`);
+    await extra?.(sb);
+  });
 }

@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { createClient } from "@supabase/supabase-js";
-import { allowWrites, hasTestAccount } from "./helpers";
+import { allowWrites, e2eCleanup, hasTestAccount } from "./helpers";
 
 /** Reply generator, templates and SOP builder (Phase 6). */
 test.skip(!hasTestAccount, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
@@ -66,14 +65,10 @@ test.describe("saving (writes data)", () => {
 
   test.afterAll(async () => {
     if (!allowWrites) return;
-    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
-    await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
-    await sb.from("templates").delete().like("title", "[e2e]%");
-    await sb.from("sops").delete().like("title", "%[e2e]%");
-    await sb.auth.signOut({ scope: "local" });
+    await e2eCleanup();
   });
 
-  test("create a reply template, use it in a reply, then delete it", async ({ page }) => {
+  test("create a reply template, use it in a reply, then see a member can't delete it", async ({ page }) => {
     await page.goto("/templates");
     await page.getByRole("button", { name: "New template" }).click();
     await page.getByLabel("Name").fill(`${RUN} reply`);
@@ -89,16 +84,15 @@ test.describe("saving (writes data)", () => {
     await page.goto("/templates");
     // Plain-text match: "[e2e]" has a special meaning in a regular expression.
     await page.getByRole("button", { name: `${RUN} reply` }).click();
-    await page.getByRole("button", { name: "Delete template" }).click();
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await expect(page.getByText(`Deleted “${RUN} reply”`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete template" })).toHaveCount(0);
   });
 
-  test("save an SOP, print it, then delete it", async ({ page }) => {
+  test("save an SOP, print it, then see a member can't delete it", async ({ page }) => {
     await page.goto("/sop");
     await needsGuides(page);
     await page.getByRole("button", { name: "Create SOP" }).click();
-    await page.getByLabel("Title").fill(`SOP ${RUN}`);
+    await page.getByLabel("Title").fill(`${RUN} SOP`);
     await page.getByLabel("Step 1", { exact: true }).fill("Open Tools > Options");
     await page.getByRole("button", { name: "Add check" }).click();
     await page.getByLabel("Check 1", { exact: true }).fill("Invoice prints with all lines");
@@ -107,13 +101,12 @@ test.describe("saving (writes data)", () => {
 
     await page.getByRole("link", { name: "Print / Save as PDF" }).click();
     await expect(page).toHaveURL(/\/sop\/SOP-\d+\/print$/);
-    await expect(page.getByRole("heading", { level: 1, name: `SOP ${RUN}` })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: `${RUN} SOP` })).toBeVisible();
     await expect(page.getByText("Open Tools > Options")).toBeVisible();
     await expect(page.getByText("Invoice prints with all lines")).toBeVisible();
 
     await page.getByRole("link", { name: "Back to editing" }).click();
-    await page.getByRole("button", { name: "Delete SOP" }).click();
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await expect(page).toHaveURL(/\/sop$/);
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete SOP" })).toHaveCount(0);
   });
 });

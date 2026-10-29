@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/shared/states";
 import { AnalysisResult } from "@/components/analyst/analysis-result";
 import { ScenarioForm } from "@/components/analyst/scenario-form";
 import { ManualJournal } from "@/components/analyst/manual-journal";
+import { useIsOwner } from "@/components/shell/team-context";
 import { analysisToGuide, deleteAnalysis, saveCalculation } from "@/app/(app)/analyst/actions";
 import { defaultValues, getScenario, runScenario, SCENARIO_CATEGORIES, SCENARIOS, type Values } from "@/lib/scenarios";
 import { claudePrompt } from "@/lib/scenarios/prompt";
@@ -35,6 +36,7 @@ async function copy(text: string) {
 }
 
 export function AnalystView({ analyses, initial }: { analyses: Analysis[]; initial: Mode }) {
+  const isOwner = useIsOwner();
   const router = useRouter();
   const [mode, setModeState] = useState<Mode>(initial);
   const [tab, setTab] = useState<"scenarios" | "history">(initial.kind === "history" ? "history" : "scenarios");
@@ -283,25 +285,27 @@ export function AnalystView({ analyses, initial }: { analyses: Analysis[]; initi
                     <Button size="sm" variant="outline" onClick={() => window.print()}>
                       <Printer /> Print / PDF
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      disabled={busy}
-                      onClick={() => {
-                        if (!window.confirm(`Delete ${saved.id}?`)) return;
-                        start(async () => {
-                          const res = await deleteAnalysis(saved.id);
-                          if (!res.ok) return void toast.error(res.error);
-                          toast.success(`${saved.id} deleted`);
-                          go({ kind: "scenario", id: SCENARIOS[0].id });
-                          setTab("scenarios");
-                          router.refresh();
-                        });
-                      }}
-                    >
-                      <Trash2 /> Delete
-                    </Button>
+                    {isOwner && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        disabled={busy}
+                        onClick={() => {
+                          if (!window.confirm(`Delete ${saved.id}?`)) return;
+                          start(async () => {
+                            const res = await deleteAnalysis(saved.id);
+                            if (!res.ok) return void toast.error(res.error);
+                            toast.success(`${saved.id} deleted`);
+                            go({ kind: "scenario", id: SCENARIOS[0].id });
+                            setTab("scenarios");
+                            router.refresh();
+                          });
+                        }}
+                      >
+                        <Trash2 /> Delete
+                      </Button>
+                    )}
                   </div>
                 </section>
                 <section aria-label="Saved result" className="rounded-lg border bg-card p-4 sm:p-5 print:border-0 print:p-0">

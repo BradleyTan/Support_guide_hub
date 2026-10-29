@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tag } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
+import { useIsOwner } from "@/components/shell/team-context";
 import { countTemplateUse, createTemplate, deleteTemplate, updateTemplate } from "@/app/(app)/templates/actions";
 import { PLACEHOLDERS, TEMPLATE_KINDS, type TemplateInput } from "@/lib/templates";
 import type { Template, TemplateKind } from "@/lib/types";
@@ -135,6 +136,7 @@ function TemplateEditor({ open, onOpenChange, editing, onSaved }: { open: boolea
 
 export function TemplatesView({ templates }: { templates: Template[] }) {
   const router = useRouter();
+  const isOwner = useIsOwner();
   const [kind, setKind] = useState<TemplateKind | "All">("All");
   const list = templates.filter((t) => kind === "All" || t.kind === kind);
   const [selectedId, setSelectedId] = useState(templates[0]?.id ?? "");
@@ -261,9 +263,11 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
                 <Button size="icon-sm" variant="ghost" aria-label="Edit template" onClick={() => openEditor(selected)}>
                   <Pencil />
                 </Button>
-                <Button size="icon-sm" variant="ghost" aria-label="Delete template" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 />
-                </Button>
+                {isOwner && (
+                  <Button size="icon-sm" variant="ghost" aria-label="Delete template" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 />
+                  </Button>
+                )}
               </div>
             </div>
             <pre className={cn("overflow-x-auto p-4 text-sm leading-relaxed whitespace-pre-wrap", selected.kind === "SQL" && "font-mono text-[13px]")}>{selected.body}</pre>

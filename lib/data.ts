@@ -40,10 +40,20 @@ export function rowToGuide(r: Tables<"guides">, extra?: { attachments?: Attachme
 }
 
 const GUIDE_COLUMNS =
-  "id, user_id, code, title, product, platform, version, module, category, symptom, error_message, cause, steps, prevention, tags, verified, uses, created_at, updated_at, deleted_at";
+  "id, user_id, updated_by, code, title, product, platform, version, module, category, symptom, error_message, cause, steps, prevention, tags, verified, uses, created_at, updated_at, deleted_at";
 
 type GuideRow = Omit<Tables<"guides">, "embedding" | "fts">;
 const asRow = (r: GuideRow) => ({ ...r, embedding: null, fts: null }) as Tables<"guides">;
+
+/**
+ * "Last edited by" name. A member can read only their own team_members row (the owner reads all), so another
+ * person's name comes back as "a teammate" when RLS hides it.
+ */
+async function editorName(supabase: Awaited<ReturnType<typeof createClient>>, updatedBy: string | null): Promise<string | undefined> {
+  if (!updatedBy) return undefined;
+  const { data } = await supabase.from("team_members").select("display_name").eq("user_id", updatedBy).maybeSingle();
+  return data?.display_name?.trim() || "a teammate";
+}
 
 export const getGuides = cache(async (): Promise<Guide[]> => {
   const supabase = await createClient();
@@ -63,7 +73,9 @@ export const getGuide = cache(async (code: string): Promise<Guide | null> => {
     supabase.from("guide_revisions").select("created_at, summary").eq("guide_id", r.id).order("created_at"),
     supabase.from("pins").select("id, title, url, site").eq("guide_id", r.id).order("created_at"),
   ]);
+  const updatedByName = await editorName(supabase, r.updated_by);
   return {
+    updatedByName,
     ...rowToGuide(asRow(r), {
       attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
       revisions: (rev.data ?? []).map((v) => ({ at: v.created_at, summary: v.summary })),
@@ -162,9 +174,9 @@ export const getInsights = cache(async (): Promise<Insights> => {
   };
 });
 
-const SOP_COLUMNS = "id, code, title, version, purpose, scope, steps, checks, updated_at, guides(code)";
+const SOP_COLUMNS = "id, code, title, version, purpose, scope, steps, checks, updated_at, updated_by, guides(code)";
 
-type SopRow = { id: string; code: string; title: string; version: string; purpose: string; scope: string; steps: Json; checks: string[]; updated_at: string; guides: { code: string } | null };
+type SopRow = { id: string; code: string; title: string; version: string; purpose: string; scope: string; steps: Json; checks: string[]; updated_at: string; updated_by?: string | null; guides: { code: string } | null };
 
 function rowToSop(r: SopRow): Sop {
   return {
@@ -208,12 +220,13 @@ export const getSop = cache(async (code: string): Promise<{ sop: Sop; images: So
   const { data, error } = await supabase.from("sops").select(SOP_COLUMNS).eq("code", code).is("deleted_at", null).maybeSingle();
   if (error) throw new Error(`Couldn’t load the SOP: ${error.message}`);
   if (!data) return null;
-  const sop = rowToSop(data as unknown as SopRow);
+  const row = data as unknown as SopRow;
+  const sop = { ...rowToSop(row), updatedByName: await editorName(supabase, row.updated_by ?? null) };
   return { sop, images: await getGuideImages(sop.guideCode) };
 });
 
 const ARTICLE_COLUMNS =
-  "id, starter_slug, starter_version, edited, title, category, tell_customer, what_it_is, example, desktop_steps, cloud_steps, steps_verified, mistakes, related, sources, reviewed, updated_at, deleted_at";
+  "id, starter_slug, starter_version, edited, title, category, tell_customer, what_it_is, example, desktop_steps, cloud_steps, steps_verified, mistakes, related, sources, reviewed, updated_at, updated_by, deleted_at";
 
 /** Knowledge hub articles (not in the bin), by category then title. */
 export const getArticles = cache(async (): Promise<KnowledgeArticle[]> => {
@@ -228,7 +241,9 @@ export const getArticle = cache(async (id: string): Promise<KnowledgeArticle | n
   const supabase = await createClient();
   const { data, error } = await supabase.from("knowledge_articles").select(ARTICLE_COLUMNS).eq("id", id).is("deleted_at", null).maybeSingle();
   if (error) throw new Error(`Couldn’t load the article: ${error.message}`);
-  return data ? rowToArticle(data as KnowledgeRow) : null;
+  if (!data) return null;
+  const row = data as KnowledgeRow;
+  return { ...rowToArticle(row), updatedByName: await editorName(supabase, row.updated_by ?? null) };
 });
 
 /** Articles in the bin (deleted in the last 30 days), newest first. */
@@ -315,12 +330,11 @@ export const getDeletedChats = cache(async (): Promise<{ id: string; title: stri
   return data.map((c) => ({ id: c.id, title: c.title, deletedAt: c.deleted_at! }));
 });
 
-/** Answers since midnight Malaysia time (the free Groq limits reset daily). */
+/** Team-wide answers since midnight Malaysia time (the free Groq limits reset daily and are shared). */
 export async function answersToday(): Promise<number> {
-  const myDate = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
   const supabase = await createClient();
-  const { count } = await supabase.from("accountant_messages").select("id", { count: "exact", head: true }).eq("role", "assistant").gte("created_at", `${myDate}T00:00:00+08:00`);
-  return count ?? 0;
+  const { data } = await supabase.rpc("team_answers_today");
+  return data ?? 0;
 }
 
 /** One saved answer and the scenario that led to it, for "Save as guide". */

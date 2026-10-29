@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { requireMember, requireOwner } from "@/lib/team";
+import { MEMBER_ONLY_ERROR, OWNER_ONLY_ERROR } from "@/lib/team-rules";
 import { sopInputSchema, type SopInput } from "@/lib/sop";
 import type { Json, TablesInsert } from "@/lib/supabase/database.types";
 
@@ -11,14 +12,14 @@ import type { Json, TablesInsert } from "@/lib/supabase/database.types";
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string; fieldErrors?: Partial<Record<keyof SopInput, string>> };
 
 const codeSchema = z.string().regex(/^SOP-\d{1,9}$/);
-const SESSION_ENDED = "Your session has ended. Please sign in again.";
+const SESSION_ENDED = MEMBER_ONLY_ERROR;
 
-async function session() {
-  return (await getUser()) ? await createClient() : null;
+async function session(level: "member" | "owner" = "member") {
+  return level === "owner" ? await requireOwner() : await requireMember();
 }
 
 /** Validates the input and turns it into table columns: the guide code becomes its id, and screenshots must belong to that guide. */
-async function toRow(sb: Awaited<ReturnType<typeof createClient>>, input: unknown): Promise<Result<TablesInsert<"sops">>> {
+async function toRow(sb: NonNullable<Awaited<ReturnType<typeof requireMember>>>, input: unknown): Promise<Result<TablesInsert<"sops">>> {
   const parsed = sopInputSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Partial<Record<keyof SopInput, string>> = {};
@@ -78,8 +79,8 @@ export async function updateSop(code: string, input: unknown): Promise<Result> {
 
 export async function deleteSop(code: string): Promise<Result> {
   if (!codeSchema.safeParse(code).success) return { ok: false, error: "This SOP no longer exists." };
-  const sb = await session();
-  if (!sb) return { ok: false, error: SESSION_ENDED };
+  const sb = await session("owner");
+  if (!sb) return { ok: false, error: OWNER_ONLY_ERROR };
   const { error } = await sb.from("sops").update({ deleted_at: new Date().toISOString() }).eq("code", code);
   if (error) return { ok: false, error: "Couldn’t delete the SOP. Please try again." };
   refresh(code);

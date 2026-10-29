@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { requireMember, requireOwner } from "@/lib/team";
+import { MEMBER_ONLY_ERROR, OWNER_ONLY_ERROR } from "@/lib/team-rules";
 import { articleInputSchema, hasNewerVersion, starterToRow, stepsChanged, type ArticleInput } from "@/lib/knowledge/model";
 import { STARTER_ARTICLES } from "@/lib/knowledge/starter";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
@@ -12,11 +13,11 @@ import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string; fieldErrors?: Partial<Record<keyof ArticleInput, string>> };
 
 const idSchema = z.uuid();
-const SESSION_ENDED = "Your session has ended. Please sign in again.";
+const SESSION_ENDED = MEMBER_ONLY_ERROR;
 const GONE = "This article no longer exists.";
 
-async function session() {
-  return (await getUser()) ? await createClient() : null;
+async function session(level: "member" | "owner" = "member") {
+  return level === "owner" ? await requireOwner() : await requireMember();
 }
 
 function refresh(id?: string) {
@@ -79,10 +80,10 @@ export async function createArticle(input: unknown): Promise<Result<{ id: string
   return { ok: true, data };
 }
 
-async function update(id: string, columns: TablesUpdate<"knowledge_articles">, failure: string): Promise<Result> {
+async function update(id: string, columns: TablesUpdate<"knowledge_articles">, failure: string, level: "member" | "owner" = "member"): Promise<Result> {
   if (!idSchema.safeParse(id).success) return { ok: false, error: GONE };
-  const sb = await session();
-  if (!sb) return { ok: false, error: SESSION_ENDED };
+  const sb = await session(level);
+  if (!sb) return { ok: false, error: level === "owner" ? OWNER_ONLY_ERROR : SESSION_ENDED };
   const { data, error } = await sb.from("knowledge_articles").update(columns).eq("id", id).is("deleted_at", null).select("id");
   if (error) return { ok: false, error: failure };
   if (!data.length) return { ok: false, error: GONE };
@@ -105,21 +106,21 @@ export async function updateArticle(id: string, input: unknown): Promise<Result>
 }
 
 export async function setArticleReviewed(id: string, reviewed: boolean): Promise<Result> {
-  return update(id, { reviewed: !!reviewed }, "Couldn’t update the article. Please try again.");
+  return update(id, { reviewed: !!reviewed }, "Couldn’t update the article. Please try again.", "owner");
 }
 
 export async function setStepsVerified(id: string, verified: boolean): Promise<Result> {
-  return update(id, { steps_verified: !!verified }, "Couldn’t update the article. Please try again.");
+  return update(id, { steps_verified: !!verified }, "Couldn’t update the article. Please try again.", "owner");
 }
 
 export async function deleteArticle(id: string): Promise<Result> {
-  return update(id, { deleted_at: new Date().toISOString() }, "Couldn’t delete the article. Please try again.");
+  return update(id, { deleted_at: new Date().toISOString() }, "Couldn’t delete the article. Please try again.", "owner");
 }
 
 export async function restoreArticle(id: string): Promise<Result> {
   if (!idSchema.safeParse(id).success) return { ok: false, error: GONE };
-  const sb = await session();
-  if (!sb) return { ok: false, error: SESSION_ENDED };
+  const sb = await session("owner");
+  if (!sb) return { ok: false, error: OWNER_ONLY_ERROR };
   const { data, error } = await sb.from("knowledge_articles").update({ deleted_at: null }).eq("id", id).not("deleted_at", "is", null).select("id");
   if (error) return { ok: false, error: "Couldn’t restore the article. Please try again." };
   if (!data.length) return { ok: false, error: "This article was permanently removed." };

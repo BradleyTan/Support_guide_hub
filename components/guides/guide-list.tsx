@@ -107,7 +107,7 @@ export function GuideList({
         }
         howItWorks={
           <>
-            Guides are stored in Supabase and only you can see them. The filter box here matches words; the <strong>Search</strong> page adds meaning-based matching and official AutoCount sources. <strong>Verified</strong> means you’ve confirmed the fix works.
+            Guides are shared with your whole team. The filter box here matches words; the <strong>Search</strong> page adds meaning-based matching and official AutoCount sources. <strong>Verified</strong> means you’ve confirmed the fix works.
           </>
         }
       />

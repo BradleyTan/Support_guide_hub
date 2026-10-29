@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { embedGuides } from "@/lib/embeddings";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { requireMember } from "@/lib/team";
+import { MEMBER_ONLY_ERROR } from "@/lib/team-rules";
 import { guides } from "@/lib/mock/guides";
 import { analyses } from "@/lib/mock/analyses";
 import { templates } from "@/lib/mock/library";
@@ -13,9 +14,8 @@ export type SeedResult = { ok: true; guides: number } | { ok: false; error: stri
 
 /** Copies the sample guides, analyses and templates into the signed-in user's account. */
 export async function loadSampleData(): Promise<SeedResult> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: "Please sign in again." };
-  const supabase = await createClient();
+  const supabase = await requireMember();
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
 
   const { count } = await supabase.from("guides").select("id", { count: "exact", head: true });
   if (count) return { ok: false, error: "You already have guides, so sample data wasn’t added." };

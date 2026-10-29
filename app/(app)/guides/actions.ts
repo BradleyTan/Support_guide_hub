@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { embedGuides } from "@/lib/embeddings";
 import { z } from "zod";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
+import { requireMember, requireOwner } from "@/lib/team";
+import { MEMBER_ONLY_ERROR, OWNER_ONLY_ERROR } from "@/lib/team-rules";
 import { describeChanges, guideInputSchema, inputToRow, type GuideInput } from "@/lib/guide-schema";
 import type { Json } from "@/lib/supabase/database.types";
 
@@ -28,14 +30,16 @@ function fieldErrors(err: z.ZodError): Partial<Record<keyof GuideInput, string>>
   return out;
 }
 
-async function session() {
+async function session(level: "member" | "owner" = "member") {
+  const supabase = level === "owner" ? await requireOwner() : await requireMember();
+  if (!supabase) return null;
   const user = await getUser();
   if (!user) return null;
-  return { user, supabase: await createClient() };
+  return { user, supabase };
 }
 
-async function findGuide(code: string) {
-  const s = await session();
+async function findGuide(code: string, level: "member" | "owner" = "member") {
+  const s = await session(level);
   if (!s) return { s: null, guide: null } as const;
   const { data } = await s.supabase.from("guides").select("*").eq("code", code).maybeSingle();
   return { s, guide: data } as const;
@@ -54,7 +58,7 @@ export async function createGuide(input: unknown): Promise<ActionResult<{ id: st
   const parsed = guideInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "A few fields need attention.", fieldErrors: fieldErrors(parsed.error) };
   const s = await session();
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  if (!s) return fail(MEMBER_ONLY_ERROR);
 
   const { data, error } = await s.supabase.from("guides").insert(inputToRow(parsed.data)).select("id, code").single();
   if (error || !data) return fail("Couldn’t save the guide. Please try again.");
@@ -70,7 +74,7 @@ export async function updateGuide(code: string, input: unknown): Promise<ActionR
   const parsed = guideInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "A few fields need attention.", fieldErrors: fieldErrors(parsed.error) };
   const { s, guide } = await findGuide(code);
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  if (!s) return fail(MEMBER_ONLY_ERROR);
   if (!guide || guide.deleted_at) return fail("This guide no longer exists.");
 
   const before: GuideInput = {
@@ -100,8 +104,8 @@ export async function updateGuide(code: string, input: unknown): Promise<ActionR
 }
 
 export async function setVerified(code: string, verified: boolean): Promise<ActionResult> {
-  const { s, guide } = await findGuide(code);
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  const { s, guide } = await findGuide(code, "owner");
+  if (!s) return fail(OWNER_ONLY_ERROR);
   if (!guide || guide.deleted_at) return fail("This guide no longer exists.");
   if (guide.verified === verified) return { ok: true, data: undefined };
   const { error } = await s.supabase.from("guides").update({ verified }).eq("id", guide.id);
@@ -116,8 +120,8 @@ export async function setVerified(code: string, verified: boolean): Promise<Acti
 // ---------------------------------------------------------------------------
 
 export async function deleteGuide(code: string): Promise<ActionResult> {
-  const { s, guide } = await findGuide(code);
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  const { s, guide } = await findGuide(code, "owner");
+  if (!s) return fail(OWNER_ONLY_ERROR);
   if (!guide) return fail("This guide no longer exists.");
   if (guide.deleted_at) return { ok: true, data: undefined };
   const { error } = await s.supabase.from("guides").update({ deleted_at: new Date().toISOString() }).eq("id", guide.id);
@@ -128,8 +132,8 @@ export async function deleteGuide(code: string): Promise<ActionResult> {
 }
 
 export async function restoreGuide(code: string): Promise<ActionResult> {
-  const { s, guide } = await findGuide(code);
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  const { s, guide } = await findGuide(code, "owner");
+  if (!s) return fail(OWNER_ONLY_ERROR);
   if (!guide) return fail("This guide was permanently removed.");
   if (!guide.deleted_at) return { ok: true, data: undefined };
   const { error } = await s.supabase.from("guides").update({ deleted_at: null }).eq("id", guide.id);
@@ -166,7 +170,7 @@ export async function addAttachment(code: string, file: unknown): Promise<Action
   const parsed = attachmentSchema.safeParse(file);
   if (!parsed.success) return fail("That file couldn’t be attached.");
   const { s, guide } = await findGuide(code);
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  if (!s) return fail(MEMBER_ONLY_ERROR);
   if (!guide || guide.deleted_at) return fail("This guide no longer exists.");
   // The file must sit in this user's folder for this guide; storage RLS enforces the user part too.
   if (!parsed.data.path.startsWith(`${s.user.id}/${guide.id}/`)) return fail("That file couldn’t be attached.");
@@ -184,8 +188,8 @@ export async function addAttachment(code: string, file: unknown): Promise<Action
 }
 
 export async function removeAttachment(attachmentId: string): Promise<ActionResult> {
-  const s = await session();
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  const s = await session("owner");
+  if (!s) return fail(OWNER_ONLY_ERROR);
   const { data: att } = await s.supabase.from("guide_attachments").select("id, guide_id, storage_path, name, guides(code)").eq("id", attachmentId).maybeSingle();
   if (!att) return fail("That attachment no longer exists.");
   await s.supabase.storage.from(BUCKET).remove([att.storage_path]);
@@ -199,7 +203,7 @@ export async function removeAttachment(attachmentId: string): Promise<ActionResu
 /** A private link to one attachment, valid for 10 minutes. */
 export async function attachmentUrl(attachmentId: string): Promise<ActionResult<{ url: string }>> {
   const s = await session();
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  if (!s) return fail(MEMBER_ONLY_ERROR);
   const { data: att } = await s.supabase.from("guide_attachments").select("storage_path, name").eq("id", attachmentId).maybeSingle();
   if (!att) return fail("That attachment no longer exists.");
   const { data, error } = await s.supabase.storage.from(BUCKET).createSignedUrl(att.storage_path, 600);
@@ -218,7 +222,7 @@ export async function importGuides(rows: unknown, fileName: string): Promise<Act
   if (valid.length !== list.data.length) return fail("Some rows are no longer valid. Go back and review them.");
   if (!valid.length) return fail("There are no rows to import.");
   const s = await session();
-  if (!s) return fail("Your session has ended. Please sign in again.");
+  if (!s) return fail(MEMBER_ONLY_ERROR);
 
   const name = fileName.slice(0, 120);
   let imported = 0;

@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 import { createClient } from "@supabase/supabase-js";
-import { allowWrites, hasTestAccount } from "./helpers";
+import { allowWrites, e2eCleanup, hasTestAccount } from "./helpers";
 
 test.skip(!hasTestAccount, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
 
@@ -52,10 +52,7 @@ test.describe("search gaps (writes data)", () => {
 
   test.afterAll(async () => {
     if (!allowWrites) return;
-    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
-    await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
-    await sb.from("search_log").delete().eq("query", query);
-    await sb.auth.signOut({ scope: "local" });
+    await e2eCleanup(); // also clears the test account's own search log
   });
 
   test("a search that finds nothing, made twice, becomes a gap", async ({ page }) => {

@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { useIsOwner } from "@/components/shell/team-context";
 import { PageHeader } from "@/components/shared/page-header";
 import { OFFICIAL_SITES } from "@/lib/official-sites";
 
@@ -78,7 +79,7 @@ function ClearSearchHistory({ count }: { count: number }) {
         size="sm"
         disabled={pending || count === 0}
         onClick={async () => {
-          if (!confirm("Clear all of your search history? Search gaps on Insights will start again from empty.")) return;
+          if (!confirm("Clear the whole team’s search history? Search gaps on Insights will start again from empty.")) return;
           setPending(true);
           const res = await clearSearchHistory();
           setPending(false);
@@ -88,7 +89,7 @@ function ClearSearchHistory({ count }: { count: number }) {
           } else toast.error(res.error);
         }}
       >
-        {pending && <Loader2 className="animate-spin" />} Clear search history
+        {pending && <Loader2 className="animate-spin" />} Clear team search history
       </Button>
     </div>
   );
@@ -263,6 +264,18 @@ function DeletedChats({ chats }: { chats: { id: string; title: string; deletedAt
   );
 }
 
+function PasswordCard() {
+  return (
+    <Card title="Account">
+      <Row title="Password" description="Change the password you use to sign in. If you forget it, use “Forgot password?” on the sign-in page.">
+        <ButtonLink variant="outline" href="/reset-password">
+          <KeyRound /> Change password
+        </ButtonLink>
+      </Row>
+    </Card>
+  );
+}
+
 export function SettingsView({
   deleted,
   deletedArticles,
@@ -278,6 +291,20 @@ export function SettingsView({
   indexed: { count: number; lastRefreshed: string | null };
   searchesLogged: number;
 }) {
+  const isOwner = useIsOwner();
+  if (!isOwner) {
+    return (
+      <>
+        <PageHeader title="Settings" description="Your chats and your account." />
+        <div className="flex max-w-4xl flex-col gap-6">
+          <Card title="Accountant chat">
+            <DeletedChats chats={deletedChats} />
+          </Card>
+          <PasswordCard />
+        </div>
+      </>
+    );
+  }
   return (
     <>
       <PageHeader title="Settings" description="Account, official sources and your data." />
@@ -297,7 +324,7 @@ export function SettingsView({
         </Card>
 
         <Card title="Privacy">
-          <Row title="Screenshots and files" description="Stored privately in your own storage bucket. Only you can open them, through links that expire after 10 minutes.">
+          <Row title="Screenshots and files" description="Stored privately in your team’s storage bucket. Only approved team members can open them, through links that expire after 10 minutes.">
             <span className="text-sm text-muted-foreground">Private</span>
           </Row>
           <Row title="Meaning-based search" description="Guide text is turned into search vectors by a model running inside your own Supabase project. It isn’t sent to any other company.">
@@ -305,7 +332,7 @@ export function SettingsView({
           </Row>
           <Row
             title="Search history"
-            description={`Your searches are logged for Insights (search gaps) and kept ${ACTIVITY_DAYS} days. Only you can see them. Clearing removes all of them now; guide-open counts are kept.`}
+            description={`Everyone’s searches are logged for Insights (search gaps) and kept ${ACTIVITY_DAYS} days. Clearing removes the whole team’s history now; guide-open counts are kept.`}
           >
             <ClearSearchHistory count={searchesLogged} />
           </Row>
@@ -331,13 +358,7 @@ export function SettingsView({
           </div>
         </Card>
 
-        <Card title="Account">
-          <Row title="Password" description="Change the password you use to sign in. If you forget it, use “Forgot password?” on the sign-in page.">
-            <ButtonLink variant="outline" href="/reset-password">
-              <KeyRound /> Change password
-            </ButtonLink>
-          </Row>
-        </Card>
+        <PasswordCard />
 
         <Card title="Your data">
           <Row title="Export everything" description="Guides, analyses, SOPs, templates and Knowledge hub articles as one Excel file, one sheet each. Items in the bin aren’t included.">

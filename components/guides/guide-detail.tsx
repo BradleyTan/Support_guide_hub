@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProductLabel, Tag, VerifiedBadge } from "@/components/shared/badges";
+import { useIsOwner } from "@/components/shell/team-context";
 import { AttachmentList } from "@/components/guides/attachments";
 import { deleteGuide, restoreGuide, setVerified } from "@/app/(app)/guides/actions";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
@@ -26,6 +27,7 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
 
 export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; allGuides: Guide[]; userId: string }) {
   const router = useRouter();
+  const isOwner = useIsOwner();
   const [verifying, startVerify] = useTransition();
   const [deleting, startDelete] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -86,9 +88,11 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
         </div>
         <h1 className="max-w-[40ch] text-xl font-semibold tracking-tight sm:text-2xl">{g.title}</h1>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant={g.verified ? "outline" : "default"} onClick={toggleVerified} disabled={verifying}>
-            {verifying ? <Loader2 className="animate-spin" /> : <BadgeCheck />} {g.verified ? "Mark unverified" : "Mark verified"}
-          </Button>
+          {isOwner && (
+            <Button size="sm" variant={g.verified ? "outline" : "default"} onClick={toggleVerified} disabled={verifying}>
+              {verifying ? <Loader2 className="animate-spin" /> : <BadgeCheck />} {g.verified ? "Mark unverified" : "Mark verified"}
+            </Button>
+          )}
           <ButtonLink size="sm" variant="outline" href={`/guides/${g.id}/edit`}>
             <Pencil /> Edit
           </ButtonLink>
@@ -98,10 +102,13 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
           <ButtonLink size="sm" variant="outline" href={`/sop/new?guide=${g.id}`}>
             <BookOpenCheck /> Turn into SOP
           </ButtonLink>
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmOpen(true)}>
-            <Trash2 /> Delete
-          </Button>
+          {isOwner && (
+            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmOpen(true)}>
+              <Trash2 /> Delete
+            </Button>
+          )}
         </div>
+        {g.updatedByName && <p className="text-xs text-muted-foreground">Last edited by {g.updatedByName}</p>}
       </header>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -204,18 +211,20 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
                       </a>
                       <span className="block text-xs text-muted-foreground">{p.site}</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label={`Unpin ${p.title}`}
-                      onClick={async () => {
-                        const res = await unpin(p.id);
-                        if (res.ok) router.refresh();
-                        else toast.error(res.error);
-                      }}
-                    >
-                      <X />
-                    </Button>
+                    {isOwner && (
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Unpin ${p.title}`}
+                        onClick={async () => {
+                          const res = await unpin(p.id);
+                          if (res.ok) router.refresh();
+                          else toast.error(res.error);
+                        }}
+                      >
+                        <X />
+                      </Button>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { requireMember, requireOwner } from "@/lib/team";
+import { MEMBER_ONLY_ERROR, OWNER_ONLY_ERROR } from "@/lib/team-rules";
 import { after } from "next/server";
 import { MIN_MEANING_SIMILARITY, backfillEmbeddings, embedQuery } from "@/lib/embeddings";
 import { isAllowedUrl, siteLabel, type OfficialHit } from "@/lib/official-sites";
@@ -35,8 +36,8 @@ export async function searchMyGuides(
   if (!q.success) return { ok: true, hits: [], meaningUsed: false };
   const f = filtersSchema.safeParse(filters);
   if (!f.success) return { ok: false, error: "Those filters aren’t valid." };
-  if (!(await getUser())) return { ok: false, error: "Your session has ended. Please sign in again." };
-  const supabase = await createClient();
+  const supabase = await requireMember();
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
 
   const embedding = await embedQuery(supabase, q.data);
   // Guides saved while the vector service was down get their vectors now, without slowing this search.
@@ -80,8 +81,8 @@ export type OfficialResult = { status: "ok"; results: OfficialHit[]; indexed: nu
 export async function searchOfficialSources(query: string): Promise<OfficialResult> {
   const q = querySchema.safeParse(query);
   if (!q.success) return { status: "error", reason: "Type something to search for." };
-  if (!(await getUser())) return { status: "error", reason: "Your session has ended. Please sign in again." };
-  const supabase = await createClient();
+  const supabase = await requireMember();
+  if (!supabase) return { status: "error", reason: MEMBER_ONLY_ERROR };
   const embedding = await embedQuery(supabase, q.data);
   const [{ data, error }, { count }] = await Promise.all([
     supabase.rpc("search_official_pages", { p_query: q.data, p_embedding: embedding, p_min_similarity: MIN_MEANING_SIMILARITY, p_limit: 10 }),
@@ -101,8 +102,8 @@ const pinSchema = z.object({ code: z.string().regex(/^G-\d{1,9}$/), title: z.str
 export async function pinToGuide(input: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
   const p = pinSchema.safeParse(input);
   if (!p.success || !isAllowedUrl(p.data.url) || !p.data.url.startsWith("https://")) return { ok: false, error: "Only https links on the official AutoCount sites can be pinned." };
-  if (!(await getUser())) return { ok: false, error: "Your session has ended. Please sign in again." };
-  const supabase = await createClient();
+  const supabase = await requireMember();
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
   const { data: guide } = await supabase.from("guides").select("id").eq("code", p.data.code).is("deleted_at", null).maybeSingle();
   if (!guide) return { ok: false, error: "That guide no longer exists." };
   const { error } = await supabase.from("pins").upsert({ guide_id: guide.id, title: p.data.title, url: p.data.url, site: siteLabel(p.data.url) }, { onConflict: "guide_id,url", ignoreDuplicates: true });
@@ -113,8 +114,8 @@ export async function pinToGuide(input: unknown): Promise<{ ok: true } | { ok: f
 
 export async function unpin(pinId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!z.uuid().safeParse(pinId).success) return { ok: false, error: "That pin no longer exists." };
-  if (!(await getUser())) return { ok: false, error: "Your session has ended. Please sign in again." };
-  const supabase = await createClient();
+  const supabase = await requireOwner();
+  if (!supabase) return { ok: false, error: OWNER_ONLY_ERROR };
   const { data, error } = await supabase.from("pins").delete().eq("id", pinId).select("guides(code)").maybeSingle();
   if (error || !data) return { ok: false, error: "Couldn’t remove the pin. Please try again." };
   if (data.guides?.code) revalidatePath(`/guides/${data.guides.code}`);
@@ -127,8 +128,8 @@ export type KnowledgeHit = { id: string; title: string; category: string; tellCu
 export async function searchKnowledge(query: string): Promise<{ ok: true; hits: KnowledgeHit[] } | { ok: false; error: string }> {
   const q = querySchema.safeParse(query);
   if (!q.success) return { ok: true, hits: [] };
-  if (!(await getUser())) return { ok: false, error: "Your session has ended. Please sign in again." };
-  const supabase = await createClient();
+  const supabase = await requireMember();
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
   const { data: ranked, error } = await supabase.rpc("search_knowledge", { p_query: q.data, p_limit: 5 });
   if (error) return { ok: false, error: "Knowledge hub search didn’t finish. Please try again." };
   if (!ranked.length) return { ok: true, hits: [] };
@@ -149,8 +150,8 @@ export type ChatHit = { id: string; title: string; updatedAt: string };
 export async function searchChats(query: string): Promise<{ ok: true; hits: ChatHit[] } | { ok: false; error: string }> {
   const q = querySchema.safeParse(query);
   if (!q.success) return { ok: true, hits: [] };
-  if (!(await getUser())) return { ok: false, error: "Your session has ended. Please sign in again." };
-  const supabase = await createClient();
+  const supabase = await requireMember();
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
   const { data: ranked, error } = await supabase.rpc("search_accountant_chats", { p_query: q.data, p_limit: 5 });
   if (error) return { ok: false, error: "Chat search didn’t finish. Please try again." };
   if (!ranked.length) return { ok: true, hits: [] };

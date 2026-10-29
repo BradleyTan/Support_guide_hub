@@ -20,6 +20,7 @@ export interface Sop {
   steps: SopStep[];
   checks: string[];
   updatedAt: string;
+  updatedByName?: string;
 }
 
 /** A screenshot that can be placed under a step; url is a short-lived private link (10 minutes). */

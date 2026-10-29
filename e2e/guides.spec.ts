@@ -1,12 +1,11 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { createClient } from "@supabase/supabase-js";
-import { allowWrites } from "./helpers";
+import { allowWrites, e2eCleanup } from "./helpers";
 
 /**
- * Guide library write tests: they create, change and delete guides, so they only run when
+ * Guide library write tests: they create and change guides (the test account is a member, so it can't verify or delete), so they only run when
  * E2E_ALLOW_WRITES=1 and a test account is set (signed in via auth.setup.ts). Everything they
- * create has a title starting with "[e2e]" and is permanently removed afterwards.
+ * create has a title starting with "[e2e]" and is removed afterwards through e2e_cleanup().
  */
 const RUN = `[e2e] ${Date.now()}`;
 
@@ -21,16 +20,11 @@ async function pick(page: Page, label: string, option: string) {
 
 test.afterAll(async () => {
   if (!allowWrites) return;
-  const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
-  await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
-  const { data } = await sb.from("guides").select("id, guide_attachments(storage_path)").like("title", "[e2e]%");
-  const paths = (data ?? []).flatMap((g) => g.guide_attachments.map((a) => a.storage_path));
-  if (paths.length) await sb.storage.from("attachments").remove(paths);
-  if (data?.length) await sb.from("guides").delete().in("id", data.map((g) => g.id));
-  await sb.auth.signOut({ scope: "local" });
+  // Uploaded files stay in storage: members can't delete storage objects, only the owner can.
+  await e2eCleanup();
 });
 
-test("create, edit, verify, attach, delete and restore a guide", async ({ page }) => {
+test("create, edit, attach and pin on a guide; a member has no verify, unpin or delete", async ({ page }) => {
   // Create
   await page.goto("/guides/new");
   await page.getByRole("button", { name: "Save guide" }).click();
@@ -66,11 +60,10 @@ test("create, edit, verify, attach, delete and restore a guide", async ({ page }
   await expect(page.getByText("Template file not copied during upgrade")).toBeVisible();
   await expect(page.getByText("Edited cause")).toBeVisible();
 
-  // Verify
-  await page.getByRole("button", { name: "Mark verified" }).click();
-  await expect(page.getByRole("button", { name: "Mark unverified" })).toBeVisible();
-  // The toast says the same words, so check the edit history in the sidebar.
-  await expect(page.locator("aside").getByText("Marked as verified")).toBeVisible();
+  // Verifying is owner-only: a member sees neither button, and the page says who edited it.
+  await expect(page.getByRole("button", { name: "Mark verified" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Mark unverified" })).toHaveCount(0);
+  await expect(page.getByText(/^Last edited by /)).toBeVisible();
 
   // Attach a small PNG, then reject a wrong file type
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -79,7 +72,7 @@ test("create, edit, verify, attach, delete and restore a guide", async ({ page }
   await page.locator('input[type="file"]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
   await expect(page.getByText("this file type isn't supported")).toBeVisible();
 
-  // Pin an official help-centre article from Search, see it on the guide, then unpin it
+  // Pin an official help-centre article from Search and see it on the guide. Unpinning is owner-only.
   await page.goto("/search?q=bank%20reconciliation");
   await page.getByRole("button", { name: /^Pin “/ }).first().click();
   await page.getByLabel("Find a guide").fill(code);
@@ -88,23 +81,13 @@ test("create, edit, verify, attach, delete and restore a guide", async ({ page }
   await page.goto(`/guides/${code}`);
   const pinned = page.locator("aside section", { has: page.getByText("Pinned official sources") });
   await expect(pinned.locator('a[href^="https://help.accounting.autocountcloud.com/"]')).toBeVisible();
-  await pinned.getByRole("button", { name: /^Unpin/ }).click();
-  await expect(pinned.getByText("None yet.")).toBeVisible();
+  await expect(pinned.getByRole("button", { name: /^Unpin/ })).toHaveCount(0);
 
-  // Delete → bin → restore
-  await page.getByRole("button", { name: "Delete" }).click();
-  await page.getByRole("button", { name: "Move to bin" }).click();
-  await expect(page).toHaveURL(/\/guides$/);
-  await page.goto(`/guides/${code}`);
-  await expect(page.getByText("That page or guide doesn’t exist")).toBeVisible();
-
+  // Deleting, removing an attachment and the bin are owner-only too.
+  await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Remove e2e-shot/ })).toHaveCount(0);
   await page.goto("/settings");
-  const row = page.getByRole("listitem").filter({ hasText: code });
-  await expect(row).toBeVisible();
-  await row.getByRole("button", { name: "Restore" }).click();
-  await expect(page.getByText(`${code} restored`)).toBeVisible();
-  await page.goto(`/guides/${code}`);
-  await expect(page.getByText("Restored from the bin")).toBeVisible();
+  await expect(page.getByText("Deleted guides")).toHaveCount(0);
 });
 
 test("import guides from a CSV file", async ({ page }) => {

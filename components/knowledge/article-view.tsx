@@ -7,6 +7,7 @@ import { ArrowLeft, BadgeCheck, Copy, ExternalLink, Loader2, MapPin, Pencil, Ref
 import { toast } from "sonner";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useIsOwner } from "@/components/shell/team-context";
 import { NeedsVerification } from "@/components/shared/badges";
 import { ReviewedBadge } from "@/components/knowledge/reviewed-badge";
 import { deleteArticle, restoreArticle, setArticleReviewed, setStepsVerified, updateFromStarter } from "@/app/(app)/knowledge/actions";
@@ -38,6 +39,7 @@ function Steps({ label, steps, verified }: { label: "Desktop" | "Cloud"; steps: 
 
 export function ArticleView({ article: a, related, newerAvailable }: { article: KnowledgeArticle; related: RelatedLink[]; newerAvailable: boolean }) {
   const router = useRouter();
+  const isOwner = useIsOwner();
   const [busy, start] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -80,20 +82,25 @@ export function ArticleView({ article: a, related, newerAvailable }: { article: 
           <span>{a.category}</span>
           <ReviewedBadge reviewed={a.reviewed} />
           <span>· updated {formatDate(a.updatedAt)}</span>
-          {a.starterSlug && <span>· starter article{a.edited ? ", edited by you" : ""}</span>}
+          {a.starterSlug && <span>· starter article{a.edited ? ", edited" : ""}</span>}
         </div>
         <h1 className="text-xl font-semibold tracking-tight break-words sm:text-2xl">{a.title}</h1>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant={a.reviewed ? "outline" : "default"} disabled={busy} onClick={() => run(() => setArticleReviewed(a.id, !a.reviewed))}>
-            <BadgeCheck /> {a.reviewed ? "Reviewed" : "Mark as reviewed"}
-          </Button>
+          {isOwner && (
+            <Button size="sm" variant={a.reviewed ? "outline" : "default"} disabled={busy} onClick={() => run(() => setArticleReviewed(a.id, !a.reviewed))}>
+              <BadgeCheck /> {a.reviewed ? "Reviewed" : "Mark as reviewed"}
+            </Button>
+          )}
           <ButtonLink size="sm" variant="outline" href={`/knowledge/${a.id}/edit`}>
             <Pencil /> Edit
           </ButtonLink>
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
-            <Trash2 /> Delete
-          </Button>
+          {isOwner && (
+            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 /> Delete
+            </Button>
+          )}
         </div>
+        {a.updatedByName && <p className="text-xs text-muted-foreground">Last edited by {a.updatedByName}</p>}
         {newerAvailable && (
           <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg border border-info/25 bg-info/[0.06] p-3 text-sm">
             <span className="flex-1">Newer version available: the starter text for this article has been corrected or improved since you added it.</span>
@@ -141,7 +148,7 @@ export function ArticleView({ article: a, related, newerAvailable }: { article: 
             <Steps label="Desktop" steps={a.desktopSteps} verified={a.stepsVerified} />
             <Steps label="Cloud" steps={a.cloudSteps} verified={a.stepsVerified} />
           </div>
-          {(a.desktopSteps || a.cloudSteps) && (
+          {isOwner && (a.desktopSteps || a.cloudSteps) && (
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => setStepsVerified(a.id, !a.stepsVerified))}>
               <MapPin /> {a.stepsVerified ? "Menu paths confirmed — undo" : "I’ve checked these menu paths"}
             </Button>

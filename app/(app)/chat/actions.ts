@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { requireMember } from "@/lib/team";
+import { MEMBER_ONLY_ERROR } from "@/lib/team-rules";
 import { chatTitle, readAnswer, turnRows } from "@/lib/accountant/chat";
 
 /** Accountant chat. Every call runs as the signed-in user, so Row Level Security applies. */
@@ -11,11 +12,11 @@ type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string 
 
 const idSchema = z.uuid();
 const maskSchema = z.record(z.string().regex(/^\[(COMPANY|IC|BANK|PHONE|EMAIL|HIDDEN) \d+\]$/), z.string().max(300)).refine((m) => Object.keys(m).length <= 1000);
-const SESSION_ENDED = "Your session has ended. Please sign in again.";
+const SESSION_ENDED = MEMBER_ONLY_ERROR;
 const GONE = "This chat no longer exists.";
 
 async function session() {
-  return (await getUser()) ? await createClient() : null;
+  return await requireMember();
 }
 
 function refresh(id?: string) {

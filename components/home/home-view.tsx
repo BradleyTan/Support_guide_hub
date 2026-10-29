@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/page-header";
+import { useIsOwner } from "@/components/shell/team-context";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
 import { countBy, recentlyUpdated, shortProduct, topTags, unverified } from "@/lib/guide-utils";
@@ -156,6 +157,7 @@ function LoadSampleButton() {
 
 function SearchFirst({ guides, opened, gaps }: { guides: Guide[]; opened: OpenedGuide[]; gaps: SearchGap[] }) {
   const openGaps = gaps.filter((g) => !g.coveredBy);
+  const isOwner = useIsOwner();
   const toCheck = unverified(guides);
   return (
     <div className="flex flex-col gap-6">
@@ -241,7 +243,7 @@ function SearchFirst({ guides, opened, gaps }: { guides: Guide[]; opened: Opened
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-        <Section title={`Waiting for you to verify (${toCheck.length})`}>
+        <Section title={`${isOwner ? "Waiting for you to verify" : "Not yet verified"} (${toCheck.length})`}>
           <p className="px-2 pt-1 pb-2 text-xs text-muted-foreground">Fixes you haven’t confirmed work yet. They show an “Unverified” label wherever they appear.</p>
           <ul>
             {toCheck.map((g) => (

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { requireMember, requireOwner } from "@/lib/team";
+import { MEMBER_ONLY_ERROR, OWNER_ONLY_ERROR } from "@/lib/team-rules";
 import { getScenario, runScenario, withCalculator, type Values } from "@/lib/scenarios";
 import { result as fillResult, step } from "@/lib/scenarios/common";
 import { entry, toSen } from "@/lib/scenarios/money";
@@ -14,9 +15,8 @@ import type { Category } from "@/lib/types";
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 const codeSchema = z.string().regex(/^AN-\d{1,9}$/);
 
-async function session() {
-  const user = await getUser();
-  return user ? await createClient() : null;
+async function session(level: "member" | "owner" = "member") {
+  return level === "owner" ? await requireOwner() : await requireMember();
 }
 
 /** Saves a calculator result. The server recalculates from the inputs rather than trusting the browser's figures. */
@@ -26,7 +26,7 @@ export async function saveCalculation(scenarioId: string, inputs: Values): Promi
   const run = runScenario(scenario, inputs);
   if (!run.ok) return { ok: false, error: "Some inputs need attention before saving." };
   const supabase = await session();
-  if (!supabase) return { ok: false, error: "Your session has ended. Please sign in again." };
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
 
   const res = withCalculator(run.output.result, { scenarioId, inputs });
   const { data, error } = await supabase
@@ -73,7 +73,7 @@ export async function saveManualJournal(input: unknown): Promise<Result<{ code: 
   }
   if (!journal.lines.length) return { ok: false, error: "Enter some amounts." };
   const supabase = await session();
-  if (!supabase) return { ok: false, error: "Your session has ended. Please sign in again." };
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
 
   const res = fillResult({
     understanding: notes ? [notes] : ["Journal entry built by hand."],
@@ -108,7 +108,7 @@ const CATEGORY_FOR: Record<string, Category> = {
 export async function analysisToGuide(code: string): Promise<Result<{ code: string }>> {
   if (!codeSchema.safeParse(code).success) return { ok: false, error: "That analysis doesn’t exist." };
   const supabase = await session();
-  if (!supabase) return { ok: false, error: "Your session has ended. Please sign in again." };
+  if (!supabase) return { ok: false, error: MEMBER_ONLY_ERROR };
   const { data: a } = await supabase.from("analyses").select("title, scenario, result").eq("code", code).is("deleted_at", null).maybeSingle();
   if (!a) return { ok: false, error: "That analysis doesn’t exist." };
   const parsed = analysisResultSchema.safeParse(a.result);
@@ -137,8 +137,8 @@ export async function analysisToGuide(code: string): Promise<Result<{ code: stri
 
 export async function deleteAnalysis(code: string): Promise<Result> {
   if (!codeSchema.safeParse(code).success) return { ok: false, error: "That analysis doesn’t exist." };
-  const supabase = await session();
-  if (!supabase) return { ok: false, error: "Your session has ended. Please sign in again." };
+  const supabase = await session("owner");
+  if (!supabase) return { ok: false, error: OWNER_ONLY_ERROR };
   const { error, count } = await supabase.from("analyses").update({ deleted_at: new Date().toISOString() }, { count: "exact" }).eq("code", code).is("deleted_at", null);
   if (error || !count) return { ok: false, error: "Couldn’t delete it. Please try again." };
   revalidatePath("/analyst");

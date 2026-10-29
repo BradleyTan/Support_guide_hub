@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "./fixtures";
-import { allowWrites, hasTestAccount } from "./helpers";
+import { allowWrites, e2eCleanup, hasTestAccount } from "./helpers";
 
 /**
  * Accountant chat. Groq is never called: the ask-accountant Edge Function is stubbed in the browser. Read-only tests
@@ -155,12 +154,12 @@ test.describe("read-only", () => {
   });
 });
 
-test("settings has the Accountant chat card", async ({ page }) => {
+test("settings shows a member their deleted chats but not the model or web-search controls", async ({ page }) => {
   await page.goto("/settings");
   const card = page.getByRole("region", { name: "Accountant chat" });
-  await expect(card.getByRole("textbox", { name: "Model" })).toHaveValue(/\S/);
-  await expect(card.getByRole("switch", { name: "Use web search when my sources don’t cover it" })).toBeVisible();
   await expect(card.getByText("Deleted chats")).toBeVisible();
+  await expect(card.getByRole("textbox", { name: "Model" })).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "Use web search when my sources don’t cover it" })).toHaveCount(0);
 });
 
 // Saving moves to a new page; the local test server builds each page the first time it opens, so allow 30s.
@@ -170,11 +169,9 @@ test.describe("saving (writes data)", () => {
   test.skip(!allowWrites, "Set E2E_ALLOW_WRITES=1 to run tests that save data");
 
   test.afterAll(async () => {
-    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
-    await sb.auth.signInWithPassword({ email: process.env.E2E_EMAIL!, password: process.env.E2E_PASSWORD! });
-    await sb.from("accountant_chats").delete().like("title", "[e2e]%");
-    await sb.from("guides").delete().like("title", "[e2e]%");
-    await sb.auth.signOut({ scope: "local" });
+    if (!allowWrites) return;
+    // Chats are private to their owner, so the member removes its own; the guides go through e2e_cleanup().
+    await e2eCleanup(async (sb) => void (await sb.from("accountant_chats").delete().like("title", "[e2e]%")));
   });
 
   test("answer shows For you / For the customer and copy needs the tick; the chat is saved, renamed, deleted and restored", async ({ page }) => {

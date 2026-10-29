@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommandPalette, type PaletteGuide, type PaletteArticle } from "@/components/shell/command-palette";
 import { isActive, navGroups, settingsItem, type NavItem } from "@/components/shell/nav";
+import { TeamProvider } from "@/components/shell/team-context";
 import { signOut } from "@/app/login/actions";
 
 function Mark() {
@@ -104,12 +105,13 @@ function ThemeToggle() {
 
 const mobileTabs = navGroups[0].items.filter((i) => !i.notOnPhoneTabs);
 
-export function AppShell({ email, guides, articles = [], children }: { email: string; guides: PaletteGuide[]; articles?: PaletteArticle[]; children: React.ReactNode }) {
+export function AppShell({ email, isOwner = false, guides, articles = [], children }: { email: string; isOwner?: boolean; guides: PaletteGuide[]; articles?: PaletteArticle[]; children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   return (
+    <TeamProvider isOwner={isOwner}>
     <div className="flex min-h-dvh">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex print:hidden">
         <Brand />
@@ -174,5 +176,6 @@ export function AppShell({ email, guides, articles = [], children }: { email: st
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} guides={guides} articles={articles} />
     </div>
+    </TeamProvider>
   );
 }

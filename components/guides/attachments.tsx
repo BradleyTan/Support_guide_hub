@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, FileText, Image as ImageIcon, ImagePlus, Loader2, ScrollText, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useIsOwner } from "@/components/shell/team-context";
 import { addAttachment, attachmentUrl, removeAttachment } from "@/app/(app)/guides/actions";
 import { ACCEPTED_TYPES, MAX_FILES, validateFile } from "@/lib/files";
 import { uploadAttachment } from "@/lib/upload";
@@ -13,6 +14,7 @@ import type { Attachment } from "@/lib/types";
 /** Attachments on a saved guide: open (private 10-minute link), remove, and upload more. */
 export function AttachmentList({ code, guideDbId, userId, attachments, compact = false }: { code: string; guideDbId: string; userId: string; attachments: Attachment[]; compact?: boolean }) {
   const router = useRouter();
+  const isOwner = useIsOwner();
   const input = useRef<HTMLInputElement>(null);
   const [busy, start] = useTransition();
   const [errors, setErrors] = useState<string[]>([]);
@@ -65,25 +67,27 @@ export function AttachmentList({ code, guideDbId, userId, attachments, compact =
               <Button type="button" variant="ghost" size="icon-xs" aria-label={`Open ${a.name}`} onClick={() => open(a.id)}>
                 <ExternalLink />
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Remove ${a.name}`}
-                disabled={removing === a.id}
-                onClick={async () => {
-                  if (!window.confirm(`Remove ${a.name} from this guide? The file is deleted.`)) return;
-                  setRemoving(a.id);
-                  const res = await removeAttachment(a.id);
-                  setRemoving(null);
-                  if (res.ok) {
-                    toast.success(`Removed ${a.name}`);
-                    router.refresh();
-                  } else toast.error(res.error);
-                }}
-              >
-                {removing === a.id ? <Loader2 className="animate-spin" /> : <Trash2 />}
-              </Button>
+              {isOwner && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Remove ${a.name}`}
+                  disabled={removing === a.id}
+                  onClick={async () => {
+                    if (!window.confirm(`Remove ${a.name} from this guide? The file is deleted.`)) return;
+                    setRemoving(a.id);
+                    const res = await removeAttachment(a.id);
+                    setRemoving(null);
+                    if (res.ok) {
+                      toast.success(`Removed ${a.name}`);
+                      router.refresh();
+                    } else toast.error(res.error);
+                  }}
+                >
+                  {removing === a.id ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                </Button>
+              )}
             </li>
           ))}
         </ul>

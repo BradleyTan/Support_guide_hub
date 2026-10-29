@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 import { SettingsView } from "@/components/settings/settings-view";
 import { getDeletedArticles, getDeletedChats, getDeletedGuides } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
+import { getMembership } from "@/lib/team";
+import { isOwner } from "@/lib/team-rules";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
+  const owner = isOwner(await getMembership());
+  if (!owner) {
+    // Members only see their own deleted chats and the password card; the owner-only data is never fetched.
+    return <SettingsView deleted={[]} deletedArticles={[]} deletedChats={await getDeletedChats()} chat={{ model: "", webSearch: false }} indexed={{ count: 0, lastRefreshed: null }} searchesLogged={0} />;
+  }
   const supabase = await createClient();
   const [deleted, deletedArticles, deletedChats, { data: chatSettings }, { count }, { data: latest }, { count: searches }] = await Promise.all([
     getDeletedGuides(),

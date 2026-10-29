@@ -39,6 +39,7 @@ export interface KnowledgeArticle extends Omit<StarterArticle, "slug" | "version
   stepsVerified: boolean;
   updatedAt: string;
   deletedAt?: string;
+  updatedByName?: string;
 }
 
 /** Shown instead of an empty box when no source gives a menu path. */
@@ -94,6 +95,7 @@ export function hasNewerVersion(a: Pick<KnowledgeArticle, "starterSlug" | "start
 /** The columns the app reads from public.knowledge_articles (user_id, fts and created_at aren't needed). */
 export interface KnowledgeRow {
   id: string;
+  updated_by?: string | null;
   starter_slug: string | null;
   starter_version: number | null;
   edited: boolean;
