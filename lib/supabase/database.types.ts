@@ -33,7 +33,7 @@ export type Database = {
           scenario: string;
           title: string;
           updated_at: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           code?: string;
@@ -59,7 +59,7 @@ export type Database = {
           image_paths: string[];
           role: string;
           text: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           analysis_id: string;
@@ -84,7 +84,7 @@ export type Database = {
           name: string;
           size_bytes: number;
           storage_path: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           created_at?: string;
@@ -102,7 +102,7 @@ export type Database = {
         ];
       };
       guide_events: {
-        Row: { id: number; user_id: string; guide_id: string; kind: string; created_at: string };
+        Row: { id: number; user_id: string | null; guide_id: string; kind: string; created_at: string };
         Insert: { user_id?: string; guide_id: string; kind?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["guide_events"]["Insert"]>;
         Relationships: [
@@ -116,7 +116,7 @@ export type Database = {
           id: string;
           snapshot: Json | null;
           summary: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           created_at?: string;
@@ -151,7 +151,8 @@ export type Database = {
           tags: string[];
           title: string;
           updated_at: string;
-          user_id: string;
+          updated_by: string | null;
+          user_id: string | null;
           uses: number;
           verified: boolean;
           version: string;
@@ -175,6 +176,7 @@ export type Database = {
           tags?: string[];
           title: string;
           updated_at?: string;
+          updated_by?: string | null;
           user_id?: string;
           uses?: number;
           verified?: boolean;
@@ -186,7 +188,7 @@ export type Database = {
       knowledge_articles: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           starter_slug: string | null;
           starter_version: number | null;
           edited: boolean;
@@ -205,6 +207,7 @@ export type Database = {
           fts: unknown;
           created_at: string;
           updated_at: string;
+          updated_by: string | null;
           deleted_at: string | null;
         };
         Insert: {
@@ -227,6 +230,7 @@ export type Database = {
           reviewed?: boolean;
           created_at?: string;
           updated_at?: string;
+          updated_by?: string | null;
           deleted_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["knowledge_articles"]["Insert"]>;
@@ -258,7 +262,7 @@ export type Database = {
           site: string;
           title: string;
           url: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           created_at?: string;
@@ -277,7 +281,7 @@ export type Database = {
       sops: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           code: string;
           guide_id: string | null;
           title: string;
@@ -288,6 +292,7 @@ export type Database = {
           checks: string[];
           created_at: string;
           updated_at: string;
+          updated_by: string | null;
           deleted_at: string | null;
         };
         Insert: {
@@ -303,6 +308,7 @@ export type Database = {
           checks?: string[];
           created_at?: string;
           updated_at?: string;
+          updated_by?: string | null;
           deleted_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sops"]["Insert"]>;
@@ -311,9 +317,16 @@ export type Database = {
         ];
       };
       search_log: {
-        Row: { id: number; user_id: string; query: string; normalized: string; guide_hits: number; created_at: string };
+        Row: { id: number; user_id: string | null; query: string; normalized: string; guide_hits: number; created_at: string };
         Insert: { user_id?: string; query: string; guide_hits: number; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["search_log"]["Insert"]>;
+        Relationships: [];
+      };
+      team_members: {
+        Row: { user_id: string; email: string | null; display_name: string; role: "owner" | "member"; status: "pending" | "approved" | "rejected" | "removed"; is_test: boolean; created_at: string; decided_at: string | null };
+        // Rows come from the sign-up trigger; the owner may only change status (column grant).
+        Insert: never;
+        Update: { status?: "pending" | "approved" | "rejected" | "removed" };
         Relationships: [];
       };
       templates: {
@@ -326,7 +339,8 @@ export type Database = {
           tags: string[];
           title: string;
           updated_at: string;
-          user_id: string;
+          updated_by: string | null;
+          user_id: string | null;
           uses: number;
         };
         Insert: {
@@ -338,6 +352,7 @@ export type Database = {
           tags?: string[];
           title: string;
           updated_at?: string;
+          updated_by?: string | null;
           user_id?: string;
           uses?: number;
         };
@@ -445,6 +460,12 @@ export type Database = {
         Args: { p_weeks?: number };
         Returns: { week_start: string; opens: number; searches: number; unmatched: number; added: number; edited: number }[];
       };
+      is_member: { Args: Record<PropertyKey, never>; Returns: boolean };
+      is_owner: { Args: Record<PropertyKey, never>; Returns: boolean };
+      owner_name: { Args: Record<PropertyKey, never>; Returns: string | null };
+      team_settings: { Args: Record<PropertyKey, never>; Returns: { chat_model: string; chat_web_search: boolean }[] };
+      team_answers_today: { Args: Record<PropertyKey, never>; Returns: number };
+      e2e_cleanup: { Args: Record<PropertyKey, never>; Returns: number };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

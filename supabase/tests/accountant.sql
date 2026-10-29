@@ -1,8 +1,13 @@
--- Checks migration 0012: guide platform backfill, chat RLS and search. Rolls back; returns 'accountant: all checks passed'.
+-- Checks migration 0012 (with 0014's team rules): guide platform, private chat RLS and search. Rolls back; returns 'accountant: all checks passed'.
 begin;
 insert into auth.users (id, instance_id, aud, role, email) values
   ('00000000-0000-4000-8000-00000000000a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-a@test.invalid'),
   ('00000000-0000-4000-8000-00000000000b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-b@test.invalid');
+-- Team sharing (0014): A is the owner, B an approved member; chats stay private between them.
+delete from public.team_members where role = 'owner';
+insert into public.team_members (user_id, email, role, status) values
+  ('00000000-0000-4000-8000-00000000000a', 'rls-a@test.invalid', 'owner', 'approved'),
+  ('00000000-0000-4000-8000-00000000000b', 'rls-b@test.invalid', 'member', 'approved');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-00000000000a","role":"authenticated"}', true);
 
@@ -12,9 +17,9 @@ insert into public.guides (title, product, steps) values ('Desktop guide', 'Auto
 do $$
 declare n int;
 begin
-  select count(*) into n from public.guides where title = 'Desktop guide' and platform = 'desktop'; if n <> 1 then raise exception 'new guide is not desktop by default'; end if;
+  select count(*) into n from public.guides where title = 'Desktop guide' and platform = 'desktop' and user_id = '00000000-0000-4000-8000-00000000000a'; if n <> 1 then raise exception 'new guide is not desktop by default'; end if;
   begin
-    update public.guides set platform = 'mobile' where title = 'Desktop guide';
+    update public.guides set platform = 'mobile' where title = 'Desktop guide' and user_id = '00000000-0000-4000-8000-00000000000a';
     raise exception 'unknown platform accepted';
   exception when check_violation then null;
   end;
