@@ -88,6 +88,12 @@ export function LoginForm({ next, linkError }: { next: string; linkError?: strin
 
       <form action={action} className="flex flex-col gap-4 rounded-lg border bg-card p-5" noValidate>
         <input type="hidden" name="next" value={next} />
+        {mode === "up" && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="name">Your name</Label>
+            <Input id="name" name="name" autoComplete="name" required maxLength={80} aria-invalid={!!error} />
+          </div>
+        )}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email">Email</Label>
           <Input

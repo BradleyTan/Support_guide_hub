@@ -53,6 +53,17 @@ test.describe("signed out", () => {
     });
   }
 
+  test("/waiting redirects to login", async ({ page }) => {
+    await page.goto("/waiting");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("the sign-up form asks for your name", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("tab", { name: "Create account" }).click();
+    await expect(page.getByLabel("Your name")).toBeVisible();
+  });
+
   test("login form validates input before contacting the server", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill("not-an-email");
@@ -125,6 +136,12 @@ test.describe("signed in", () => {
     await page.keyboard.press("Escape");
     await expect(input).toBeHidden();
     expect(errors, errors.join("\n")).toEqual([]);
+  });
+
+  test("an approved account is not sent to the waiting page", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).not.toHaveURL(/\/waiting/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Guidelines/);
   });
 
   test("unknown guide shows the not-found page", async ({ page }) => {

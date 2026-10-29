@@ -11,6 +11,7 @@ export type AuthState = { error?: string; message?: string; email?: string };
 const emailField = z.email("Enter a valid email address.");
 const passwordField = z.string().min(8, "Use at least 8 characters for the password.");
 const credentials = z.object({ email: emailField, password: passwordField });
+const nameField = z.string().trim().min(1, "Enter your name.").max(80, "Use 80 characters or fewer for your name.");
 
 async function origin() {
   return (await headers()).get("origin") ?? "";
@@ -36,9 +37,11 @@ export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
   const parsed = credentials.safeParse({ email: form.get("email"), password: form.get("password") });
   const email = String(form.get("email") ?? "");
   if (!parsed.success) return { error: parsed.error.issues[0].message, email };
+  const name = nameField.safeParse(form.get("name"));
+  if (!name.success) return { error: name.error.issues[0].message, email };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ ...parsed.data, options: { emailRedirectTo: `${await origin()}/auth/confirm` } });
+  const { data, error } = await supabase.auth.signUp({ ...parsed.data, options: { emailRedirectTo: `${await origin()}/auth/confirm`, data: { display_name: name.data } } });
   if (error) {
     if (error.code === "over_email_send_rate_limit") return { email, error: "Too many emails sent in the last hour. Please try again later." };
     if (error.code === "weak_password") return { email, error: "That password is too easy to guess. Try a longer one." };

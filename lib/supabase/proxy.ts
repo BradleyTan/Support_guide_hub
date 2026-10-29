@@ -32,6 +32,7 @@ export async function updateSession(request: NextRequest) {
     url.search = path === "/" ? "" : `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return NextResponse.redirect(url);
   }
+  // /waiting is not public: signed-out visitors go to /login; signed-in (even unapproved) users pass through.
   if (signedIn && path === "/login") {
     return NextResponse.redirect(new URL("/", request.url));
   }
