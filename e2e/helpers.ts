@@ -53,3 +53,23 @@ export async function e2eCleanup(extra?: (sb: SupabaseClient) => Promise<void>) 
     await extra?.(sb);
   });
 }
+
+/**
+ * Prefixes "[e2e] " to the title of rows this test account created, so e2e_cleanup() (which matches only "[e2e]" titles) removes
+ * them. Members may UPDATE shared rows under RLS; the user_id filter keeps this to the test account's own rows.
+ */
+export async function markAsE2E(
+  sb: SupabaseClient,
+  table: "analyses" | "knowledge_articles",
+  match: { column: "code" | "starter_slug"; values: string[]; createdSince?: string },
+) {
+  const { data: auth } = await sb.auth.getUser();
+  if (!auth.user || !match.values.length) return;
+  let query = sb.from(table).select("id, title").eq("user_id", auth.user.id).in(match.column, match.values);
+  if (match.createdSince) query = query.gte("created_at", match.createdSince);
+  const { data } = await query;
+  for (const row of data ?? []) {
+    if (row.title.startsWith("[e2e]")) continue;
+    await sb.from(table).update({ title: `[e2e] ${row.title}` }).eq("id", row.id);
+  }
+}

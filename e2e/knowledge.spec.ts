@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { allowWrites, e2eCleanup, hasTestAccount } from "./helpers";
+import { allowWrites, e2eCleanup, hasTestAccount, markAsE2E } from "./helpers";
 
 /** Knowledge hub. Read-only tests change nothing; the write tests remove only the rows they created. */
 test.skip(!hasTestAccount, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
@@ -41,18 +41,25 @@ test.describe("saving (writes data)", () => {
   test.skip(({ isMobile }) => isMobile, "write tests run once, on desktop");
   test.skip(!allowWrites, "Set E2E_ALLOW_WRITES=1 to run tests that save data");
 
+  const started = new Date(Date.now() - 5_000).toISOString();
+  const SLUGS = ["debtor-aging", "ar-deposit"];
+
   test.afterAll(async () => {
     if (!allowWrites) return;
-    // Removes the "[e2e]" article. Starter articles the first test adds are real content, and only the owner can delete them.
-    await e2eCleanup();
+    // Starters this run added are renamed "[e2e] …" first (member UPDATE, own rows created since the run began), so
+    // e2e_cleanup removes them and the next run can add them again.
+    await e2eCleanup(async (sb) => {
+      await markAsE2E(sb, "knowledge_articles", { column: "starter_slug", values: SLUGS, createdSince: started });
+      await sb.rpc("e2e_cleanup");
+    });
   });
 
-  test("add two starters, read one and copy the customer text; a member can't review, confirm or delete", async ({ page }) => {
+  test("add two starters, read one and copy the customer text", async ({ page }) => {
     await page.goto("/knowledge");
     const open = page.getByRole("main").getByRole("button", { name: /Add starter articles/ }).first();
     await open.click();
     const dialog = page.getByRole("dialog");
-    test.skip(!(await dialog.getByRole("checkbox", { name: "Debtor aging" }).isVisible()), "the test account already has these starters");
+    test.skip(!(await dialog.getByRole("checkbox", { name: "Debtor aging" }).isVisible()), "the shared library already has these starters (left by an earlier run or added for real); only the owner can delete them");
     await dialog.getByRole("button", { name: "Select none" }).click();
     await dialog.getByRole("checkbox", { name: "Debtor aging" }).check();
     await dialog.getByRole("checkbox", { name: "Customer deposit (AR deposit)" }).check();
@@ -70,13 +77,9 @@ test.describe("saving (writes data)", () => {
     await expect(page.getByLabel("Desktop").getByText(NOT_FOUND)).toBeVisible();
     await expect(page.getByText("Needs verification").first()).toBeVisible();
 
-    // Marking reviewed, confirming menu paths and deleting are owner-only.
-    await expect(page.getByRole("button", { name: "Mark as reviewed" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /I’ve checked these menu paths/ })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
   });
 
-  test("write your own article and edit it", async ({ page }) => {
+  test("write your own article and edit it; a member has no review, confirm or delete", async ({ page }) => {
     await page.goto("/knowledge/new");
     await page.getByLabel("Title").fill("[e2e] Rounding adjustment");
     await page.getByLabel("Tell the customer").fill("Rounding adjustment is the few sen added or removed so the total is a round amount.");
@@ -84,6 +87,11 @@ test.describe("saving (writes data)", () => {
     await page.getByRole("button", { name: "Save article" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "[e2e] Rounding adjustment" })).toBeVisible();
     await expect(page.getByLabel("Desktop").getByText(NOT_FOUND)).toBeVisible();
+    // Marking reviewed, confirming menu paths and deleting are owner-only, so a member sees none of them on its own article.
+    await expect(page.getByRole("link", { name: "Edit" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Mark as reviewed" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /I’ve checked these menu paths/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
 
     // A long pasted link must wrap on a phone instead of making the page scroll sideways.
     await page.getByRole("link", { name: "Edit" }).click();

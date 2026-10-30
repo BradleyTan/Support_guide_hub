@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { allowWrites, e2eCleanup, hasTestAccount } from "./helpers";
+import { allowWrites, e2eCleanup, hasTestAccount, markAsE2E } from "./helpers";
 
 test.skip(!hasTestAccount, "Set E2E_EMAIL and E2E_PASSWORD to run signed-in tests");
 
@@ -50,9 +50,15 @@ test.describe("saving (writes data)", () => {
   test.skip(({ isMobile }) => isMobile, "write tests run once, on desktop");
   test.skip(!allowWrites, "Set E2E_ALLOW_WRITES=1 to run tests that save data");
 
+  const created: string[] = []; // analysis codes saved by this run
+
   test.afterAll(async () => {
     if (!allowWrites) return;
-    await e2eCleanup();
+    // A saved calculation is titled after its scenario, which e2e_cleanup doesn't match: rename this run's analyses first.
+    await e2eCleanup(async (sb) => {
+      await markAsE2E(sb, "analyses", { column: "code", values: created });
+      await sb.rpc("e2e_cleanup");
+    });
   });
 
   test("save a calculation to history and reopen it in the calculator", async ({ page }) => {
@@ -62,6 +68,7 @@ test.describe("saving (writes data)", () => {
     const toast = page.getByText(/^Saved as AN-\d+$/);
     await expect(toast).toBeVisible();
     const code = (await toast.textContent())!.replace("Saved as ", "");
+    created.push(code);
 
     await page.getByRole("tab", { name: /History/ }).click();
     await page.getByRole("button", { name: new RegExp(code) }).click();
@@ -80,6 +87,7 @@ test.describe("saving (writes data)", () => {
     await page.getByRole("button", { name: "Save to history" }).click();
     await expect(page).toHaveURL(/analysis=AN-\d+/);
     const code = new URL(page.url()).searchParams.get("analysis")!;
+    created.push(code);
 
     await page.getByRole("button", { name: "Save as guide" }).click();
     await expect(page).toHaveURL(/\/guides\/G-\d+$/);
