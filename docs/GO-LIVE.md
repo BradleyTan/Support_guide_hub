@@ -48,7 +48,7 @@ Chosen because its free plan allows work use (Vercel's free plan is non-commerci
 
 ## Security and data
 
-- [x] **You:** Supabase → Authentication → Sign In / Providers → **Allow new users to sign up** turned off (just you for now; add people under Authentication → Users → Add user, and only after deciding how they share data and the Groq limits).
+- [x] **You:** Supabase → Authentication → Sign In / Providers → **Allow new users to sign up** turned off while it was just you. To let your team in, follow the **Team** section below, which turns it on.
 
 - [ ] Supabase security advisor shows no issues apart from the optional item below; the scripts in `supabase/tests/` all report “all checks passed”.
 - [ ] Optional, **You:** Authentication → Settings (Password security) → turn on **Leaked password protection** (blocks passwords found in known data leaks). It may need a paid plan.
@@ -56,3 +56,17 @@ Chosen because its free plan allows work use (Vercel's free plan is non-commerci
 - [ ] Know how to back up: **Settings → Export everything** (Excel), and the `supabase db dump` command in the README.
 - [ ] Bin: items deleted more than 30 days ago are removed for good every night (job `purge-bin`). Restore anything you need before then.
 - [ ] Free-plan pause: the Supabase project pauses after about 7 days without use; resume it from the Supabase dashboard (or upgrade if that becomes a problem).
+
+## Team
+
+Team sharing is built and deployed (migrations 0014 and 0015; Edge Functions `ask-accountant`, `embed`, `notify-owner`). Sign-ups are still off until you finish these steps.
+
+- [ ] **You:** Supabase → **Edge Functions → Secrets** → add `SMTP_USER` (the Gmail address that sends the notice) and `SMTP_PASS` (a Gmail App password: Google Account → Security → 2-Step Verification → App passwords). Never paste them anywhere else. They are used only to email you "New sign-up waiting: <name>".
+- [ ] **You:** Supabase → **Authentication → URL Configuration**: **Site URL** is `https://atc-supportguide.netlify.app` and **Redirect URLs** include `https://atc-supportguide.netlify.app/auth/confirm`.
+- [ ] **You:** Supabase → **Authentication → Sign In / Providers** → turn on **Allow new users to sign up** (email confirmation stays on).
+- [ ] **You:** test with a second email address:
+  1. Sign up with a name and confirm the email.
+  2. Check that you (the owner) get "New sign-up waiting: <name>".
+  3. Approve the person on **Team**.
+  4. Sign in as that person: guides and the Accountant chat work, and the owner-only buttons (verify, delete, restore, settings, export) are hidden.
+- [ ] To remove someone later: **Team → Remove access**. Their work stays in the library.

@@ -25,6 +25,13 @@ Everything runs on free tiers and open-source libraries: no paid services, and n
 - When a starter article is corrected in a later version, an article you haven't edited shows **Newer version available → Update**; edited articles are never changed.
 - Articles appear in **Search** (a Knowledge hub section), the **Ctrl K** palette, **Settings → Export everything** (sheet "Knowledge hub") and the 30-day bin (Settings → Deleted Knowledge hub articles).
 
+## Team
+
+- The owner is bradleytan119@gmail.com. Others sign up with their name, confirm their email and wait on `/waiting` until the owner approves them on `/team` (owner only). The owner is emailed "New sign-up waiting: <name>" through the `notify-owner` Edge Function.
+- **Members** can view, add and edit guides, analyses, SOPs, templates and Knowledge hub articles, and use the Accountant chat. **Only the owner** verifies guides, deletes and restores, changes Settings and exports. Chats are private to each person.
+- **Remove access** on `/team` stops someone signing in to the shared library; their work is kept.
+- Setup (SMTP secrets, URL settings, turning sign-ups on, testing with a second email): the **Team** section of [docs/GO-LIVE.md](docs/GO-LIVE.md).
+
 ## Replies, SOPs and templates (no AI)
 
 - **Reply generator:** choose a guide or analysis, a reply template (or the standard reply), the client’s name and the channel (Zoho Desk email or WhatsApp). Placeholders such as `{contact}`, `{title}`, `{cause}`, `{steps}`, `{prevention}`, and for analyses `{entries}` and `{treatment}`, are filled in; a line whose placeholders have nothing to fill is left out. WhatsApp puts headings in *bold*. Edit the draft, then copy it. English only. AutoCount menu paths from analyses are never put in a reply, because they aren’t confirmed.
@@ -82,6 +89,7 @@ Before relying on the app for real work, go through [docs/GO-LIVE.md](docs/GO-LI
 | `NEXT_PUBLIC_SUPABASE_URL` | browser + server | Public |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | browser + server | Public; Row Level Security protects the data |
 | `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_ALLOW_WRITES` | tests only | A dedicated test account (see Checks) |
+| `E2E_OWNER_EMAIL`, `E2E_OWNER_PASSWORD` | tests only | Optional: the owner account, for `e2e/team-owner.spec.ts` (skipped when not set) |
 
 No secret key is used by the app. Every database call runs as the signed-in user.
 
@@ -94,8 +102,8 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables; 0011 Knowledge hub; 0012 Accountant chat and the guide Platform field; 0013 Winflector and GO-Global products). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
-- Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`, `ask-accountant`). Code shared by the app and `ask-accountant` lives in `lib/accountant/core/`; run `npm run sync:core` after changing it (a unit test fails if the copy in `supabase/functions/_shared/` drifts), then redeploy the function.
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables; 0011 Knowledge hub; 0012 Accountant chat and the guide Platform field; 0013 Winflector and GO-Global products; 0014 team membership and RLS; 0015 owner notification on new sign-ups). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`, `ask-accountant`, `notify-owner`). Code shared by the app and `ask-accountant` lives in `lib/accountant/core/`; run `npm run sync:core` after changing it (a unit test fails if the copy in `supabase/functions/_shared/` drifts), then redeploy the function.
 - **Bin:** deleted items stay restorable for 30 days; every night at 03:45 Malaysia time the `purge-bin` job removes older ones for good (guides together with their files). The function only accepts calls carrying a secret kept in the database Vault, which only the scheduled job sends.
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.
 - Security checks: run the scripts in `supabase/tests/` in the Supabase SQL editor. Each uses a transaction, rolls back, and reports "all checks passed".
