@@ -106,7 +106,8 @@ test.describe("saving (writes data)", () => {
     await expect(page.getByText("Invoice prints with all lines")).toBeVisible();
 
     await page.getByRole("link", { name: "Back to editing" }).click();
-    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
+    // The editor has a Save button in the header and another under the form (as on main), so check the first.
+    await expect(page.getByRole("button", { name: "Save", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Delete SOP" })).toHaveCount(0);
   });
 });
