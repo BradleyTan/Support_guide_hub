@@ -69,6 +69,13 @@ test("the owner can verify, delete and restore a guide, and sees the owner-only 
     await page.goto(`/guides/${code}`);
     await expect(page.getByText("Restored from the bin")).toBeVisible();
 
+    // Team page: the owner sees the link and the approved test member listed under Team.
+    await page.goto("/team");
+    await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Team", exact: true })).toBeVisible();
+    const team = page.getByRole("region", { name: "Team" });
+    await expect(team.getByRole("button", { name: "Remove access" }).first()).toBeVisible();
+    await expect(page.getByRole("region", { name: "Waiting for approval" })).toBeVisible();
   } finally {
     await context.close();
   }

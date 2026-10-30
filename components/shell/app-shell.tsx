@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommandPalette, type PaletteGuide, type PaletteArticle } from "@/components/shell/command-palette";
-import { isActive, navGroups, settingsItem, type NavItem } from "@/components/shell/nav";
-import { TeamProvider } from "@/components/shell/team-context";
+import { isActive, navGroups, settingsItem, teamItem, type NavItem } from "@/components/shell/nav";
+import { TeamProvider, useIsOwner } from "@/components/shell/team-context";
 import { signOut } from "@/app/login/actions";
 
 function Mark() {
@@ -45,6 +45,7 @@ function NavLink({ item, pathname, onNavigate }: { item: NavItem; pathname: stri
 }
 
 function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const owner = useIsOwner();
   return (
     <nav aria-label="Main" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">
       {navGroups.map((group) => (
@@ -56,6 +57,7 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
         </div>
       ))}
       <div className="mt-auto flex flex-col gap-0.5">
+        {owner && <NavLink item={teamItem} pathname={pathname} onNavigate={onNavigate} />}
         <NavLink item={settingsItem} pathname={pathname} onNavigate={onNavigate} />
       </div>
     </nav>

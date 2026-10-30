@@ -26,3 +26,26 @@ export function getMembershipStatusCopy(m: Membership | null, ownerName: string)
 /** Error copy returned by server actions when the caller fails the membership gate. */
 export const MEMBER_ONLY_ERROR = "Only approved team members can do this.";
 export const OWNER_ONLY_ERROR = "Only the owner can do this.";
+
+/** One row of the Team page. */
+export type TeamMemberRow = {
+  userId: string;
+  email: string | null;
+  displayName: string;
+  role: Membership["role"];
+  status: Membership["status"];
+  createdAt: string;
+};
+
+const byName = (a: TeamMemberRow, b: TeamMemberRow) =>
+  (a.displayName || a.email || "").localeCompare(b.displayName || b.email || "", undefined, { sensitivity: "base" });
+
+/** Splits people for the Team page. The owner is never listed. Pending: oldest first. Team: by name. Inactive: newest first. */
+export function groupMembers(rows: TeamMemberRow[]): { pending: TeamMemberRow[]; approved: TeamMemberRow[]; inactive: TeamMemberRow[] } {
+  const people = rows.filter((r) => r.role !== "owner");
+  return {
+    pending: people.filter((r) => r.status === "pending").sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    approved: people.filter((r) => r.status === "approved").sort(byName),
+    inactive: people.filter((r) => r.status === "rejected" || r.status === "removed").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+  };
+}

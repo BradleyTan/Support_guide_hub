@@ -15,7 +15,8 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { allNavItems } from "@/components/shell/nav";
+import { allNavItems, teamItem } from "@/components/shell/nav";
+import { useIsOwner } from "@/components/shell/team-context";
 
 export interface PaletteGuide {
   id: string;
@@ -33,6 +34,7 @@ export type PaletteArticle = { id: string; title: string; category: string };
 export function CommandPalette({ open, onOpenChange, guides, articles = [] }: { open: boolean; onOpenChange: (open: boolean) => void; guides: PaletteGuide[]; articles?: PaletteArticle[] }) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  const owner = useIsOwner();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -85,7 +87,7 @@ export function CommandPalette({ open, onOpenChange, guides, articles = [] }: { 
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Go to">
-          {allNavItems.map((item) => (
+          {(owner ? [...allNavItems, teamItem] : allNavItems).map((item) => (
             <CommandItem key={item.href} onSelect={() => go(item.href)}>
               <item.icon /> {item.label}
               {item.shortcut && <CommandShortcut>{item.shortcut}</CommandShortcut>}

@@ -10,6 +10,7 @@ import {
   MessagesSquare,
   Search,
   Settings,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +51,9 @@ export const navGroups: NavGroup[] = [
     ],
   },
 ];
+
+/** Owner-only: shown in the sidebar and command palette only to the owner. */
+export const teamItem: NavItem = { href: "/team", label: "Team", icon: Users };
 
 export const settingsItem: NavItem = { href: "/settings", label: "Settings", icon: Settings };
 

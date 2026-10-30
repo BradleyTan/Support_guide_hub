@@ -85,3 +85,11 @@ test("Knowledge articles show no review or delete controls", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Mark as reviewed" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
 });
+
+test("a member gets Not found at /team and sees no Team link", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Team", exact: true })).toHaveCount(0);
+  await page.goto("/team");
+  await expect(page.getByText("That page or guide doesn’t exist")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Waiting for approval" })).toHaveCount(0);
+});
