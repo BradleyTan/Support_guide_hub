@@ -152,6 +152,10 @@ Deno.serve(async (req: Request) => {
   });
   const { data: who, error: authError } = await db.auth.getUser(token);
   if (authError || !who.user || who.user.is_anonymous) return json({ error: "Sign in required" }, 401);
+  // Only approved team members may ask; anyone waiting (or removed) is told so.
+  const { data: member, error: memberError } = await db.rpc("is_member");
+  if (memberError) console.error("[ask-accountant] membership check failed", memberError.message);
+  if (member !== true) return json({ error: "not_approved" }, 403);
 
   let input: ReturnType<typeof readBody>;
   try {
@@ -167,7 +171,8 @@ Deno.serve(async (req: Request) => {
   const key = Deno.env.get("GROQ_API_KEY");
   if (!key) return json({ error: "not_configured" }, 503);
 
-  const { data: settings } = await db.from("user_settings").select("chat_model, chat_web_search").maybeSingle();
+  // The owner's chat settings apply to the whole team.
+  const { data: settings } = await db.rpc("team_settings").maybeSingle<{ chat_model: string | null; chat_web_search: boolean | null }>();
   const model = settings?.chat_model || DEFAULT_MODEL;
 
   try {

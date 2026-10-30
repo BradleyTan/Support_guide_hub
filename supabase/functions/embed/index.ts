@@ -11,18 +11,29 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-/** The gateway also accepts the public (publishable) key, so confirm there is a real signed-in user. */
-async function isSignedInUser(req: Request) {
+/**
+ * The gateway also accepts the public (publishable) key, so confirm there is a real signed-in user,
+ * and that they are an approved team member.
+ */
+async function caller(req: Request): Promise<"none" | "pending" | "member"> {
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) return false;
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+  if (!token) return "none";
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false },
+  });
   const { data, error } = await supabase.auth.getUser(token);
-  return !error && !!data.user && !data.user.is_anonymous;
+  if (error || !data.user || data.user.is_anonymous) return "none";
+  const { data: member, error: memberError } = await supabase.rpc("is_member");
+  if (memberError) console.error("[embed] membership check failed", memberError.message);
+  return member === true ? "member" : "pending";
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
-  if (!(await isSignedInUser(req))) return json({ error: "Sign in required" }, 401);
+  const who = await caller(req);
+  if (who === "none") return json({ error: "Sign in required" }, 401);
+  if (who === "pending") return json({ error: "not_approved" }, 403);
 
   let body: unknown;
   try {

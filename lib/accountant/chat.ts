@@ -52,6 +52,7 @@ export function askErrorMessage(status: number, body: unknown): string {
   const b = (body && typeof body === "object" ? body : {}) as { error?: string; retryAfter?: number };
   if (status === 429) return `Groq's free limit is busy — try again in ${Math.max(1, Math.round(Number(b.retryAfter) || 60))} seconds`;
   if (status === 401) return "Your session has ended. Please sign in again.";
+  if (status === 403 && b.error === "not_approved") return "Your account is waiting for approval.";
   if (status === 503 || b.error === "not_configured") return "The Groq key isn't set up yet. Add GROQ_API_KEY under Supabase → Edge Functions → Secrets (see docs/GO-LIVE.md).";
   if (b.error === "bad_answer") return "The answer came back in a form that couldn't be checked. Please try again.";
   if (b.error === "mask_too_large") return "This chat has too many hidden names and numbers to continue. Please start a new chat.";

@@ -102,6 +102,10 @@ describe("askErrorMessage", () => {
     expect(askErrorMessage(500, "x")).toMatch(/try again/i);
     expect(askErrorMessage(400, { error: "mask_too_large" })).toMatch(/new chat/i);
   });
+
+  it("tells someone not yet approved that they are waiting", () => {
+    expect(askErrorMessage(403, { error: "not_approved" })).toBe("Your account is waiting for approval.");
+  });
 });
 
 describe("unmaskAnswer", () => {
