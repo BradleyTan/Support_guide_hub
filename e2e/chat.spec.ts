@@ -187,8 +187,13 @@ test.describe("saving (writes data)", () => {
     const forCustomer = answer.getByRole("region", { name: "For the customer" });
     await expect(forCustomer).toContainText("Cr Trade debtor - Lee Trading Sdn Bhd RM1,000.00");
     await expect(forCustomer.getByRole("button", { name: "Copy for the customer" })).toHaveCount(0);
-    await forCustomer.getByRole("checkbox", { name: "I’ve checked the entry and steps" }).check();
+    const tick = forCustomer.getByRole("checkbox", { name: "I’ve checked the entry and steps" });
+    await tick.check();
     await expect(forCustomer.getByRole("button", { name: "Copy for the customer" })).toBeVisible();
+    // The tick shows at once but saves in the background (the box is disabled meanwhile). Reloading before the save
+    // finishes races it, so wait for it; still ticked afterwards means it saved (a failed save unticks it with an error).
+    await expect(tick).toBeEnabled({ timeout: 15_000 });
+    await expect(tick).toBeChecked();
     await page.reload();
     await expect(page.getByRole("checkbox", { name: "I’ve checked the entry and steps" })).toBeChecked();
 
