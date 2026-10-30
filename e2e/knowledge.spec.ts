@@ -42,14 +42,16 @@ test.describe("saving (writes data)", () => {
   test.skip(!allowWrites, "Set E2E_ALLOW_WRITES=1 to run tests that save data");
 
   const started = new Date(Date.now() - 5_000).toISOString();
-  const SLUGS = ["debtor-aging", "ar-deposit"];
+  // The starters this run ticks. The picker lists only starters the shared library doesn't have yet (the owner may
+  // already have added some for real), so the second one is chosen from whatever is still listed.
+  const added: string[] = [];
 
   test.afterAll(async () => {
     if (!allowWrites) return;
-    // Starters this run added are renamed "[e2e] …" first (member UPDATE, own rows created since the run began), so
-    // e2e_cleanup removes them and the next run can add them again.
+    // Only the starters this run added (the test member's own rows, created since the run began) are renamed
+    // "[e2e] …", so e2e_cleanup removes them and the next run can add them again. Nobody else's article is touched.
     await e2eCleanup(async (sb) => {
-      await markAsE2E(sb, "knowledge_articles", { column: "starter_slug", values: SLUGS, createdSince: started });
+      await markAsE2E(sb, "knowledge_articles", { column: "title", values: added, createdSince: started });
       await sb.rpc("e2e_cleanup");
     });
   });
@@ -59,10 +61,15 @@ test.describe("saving (writes data)", () => {
     const open = page.getByRole("main").getByRole("button", { name: /Add starter articles/ }).first();
     await open.click();
     const dialog = page.getByRole("dialog");
-    test.skip(!(await dialog.getByRole("checkbox", { name: "Debtor aging" }).isVisible()), "the shared library already has these starters (left by an earlier run or added for real); only the owner can delete them");
+    await expect(dialog.getByRole("heading", { name: "Add starter articles" })).toBeVisible();
+    const listed = (await dialog.locator("label").allInnerTexts()).map((t) => t.trim());
+    const other = listed.find((t) => t !== "Debtor aging");
+    test.skip(!listed.includes("Debtor aging") || !other, "the shared library already has Debtor aging or every other starter (left by an earlier run or added for real); only the owner can delete them");
     await dialog.getByRole("button", { name: "Select none" }).click();
-    await dialog.getByRole("checkbox", { name: "Debtor aging" }).check();
-    await dialog.getByRole("checkbox", { name: "Customer deposit (AR deposit)" }).check();
+    for (const title of ["Debtor aging", other!]) {
+      await dialog.getByRole("checkbox", { name: title, exact: true }).check();
+      added.push(title);
+    }
     await dialog.getByRole("button", { name: "Add 2 articles" }).click();
     await expect(page.getByText("Added 2 articles")).toBeVisible();
 

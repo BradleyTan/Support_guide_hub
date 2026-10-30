@@ -61,7 +61,7 @@ export async function e2eCleanup(extra?: (sb: SupabaseClient) => Promise<void>) 
 export async function markAsE2E(
   sb: SupabaseClient,
   table: "analyses" | "knowledge_articles",
-  match: { column: "code" | "starter_slug"; values: string[]; createdSince?: string },
+  match: { column: "code" | "starter_slug" | "title"; values: string[]; createdSince?: string },
 ) {
   const { data: auth } = await sb.auth.getUser();
   if (!auth.user || !match.values.length) return;
