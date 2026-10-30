@@ -1,4 +1,4 @@
--- Checks migration 0014: team membership, shared data rules, owner-only powers, private chats, sign-up and e2e clean-up.
+-- Checks migrations 0014 and 0016: team membership, shared data rules, owner-only powers, private chats, sign-up and e2e clean-up.
 -- Rolls back; returns 'team: all checks passed'.
 -- People: O owner, M member, P pending, R removed, T test member, X throwaway member (deleted), S / U sign-ups.
 -- The real owner row is set aside inside the transaction so O can be the one owner.
@@ -212,7 +212,7 @@ end $$;
 -- ---------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e2","role":"authenticated"}', true);
 do $$
-declare editor uuid;
+declare editor uuid; n int;
 begin
   insert into public.templates (id, kind, title, body, updated_by) values
     ('00000000-0000-4000-8000-0000000000fb', 'Reply', 'Spoofed editor', 'x', '00000000-0000-4000-8000-0000000000e1');
@@ -239,12 +239,13 @@ begin
   exception when insufficient_privilege then null; end;
   begin update public.templates set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000f1'; raise exception 'member rewrote a template''s created_at';
   exception when insufficient_privilege then null; end;
-  begin update public.guide_attachments set created_at = now() - interval '9 years' where guide_id = '00000000-0000-4000-8000-0000000000a1'; raise exception 'member rewrote an attachment''s created_at';
-  exception when insufficient_privilege then null; end;
+  -- (0016: attachment rows can't be updated through the API at all.)
+  update public.guide_attachments set created_at = now() - interval '9 years' where guide_id = '00000000-0000-4000-8000-0000000000a1';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'member rewrote an attachment''s created_at'; end if;
 end $$;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}', true);
 do $$
-declare editor uuid;
+declare editor uuid; n int;
 begin
   -- Opening a guide is not an edit: the editor stays the member.
   perform public.increment_guide_uses('00000000-0000-4000-8000-0000000000a2');
@@ -252,8 +253,8 @@ begin
   if editor is distinct from '00000000-0000-4000-8000-0000000000e2' then raise exception 'opening a guide changed updated_by to %', editor; end if;
   begin update public.guides set created_at = now() - interval '9 years' where id = '00000000-0000-4000-8000-0000000000a1'; raise exception 'owner rewrote a guide''s created_at';
   exception when insufficient_privilege then null; end;
-  begin update public.guide_attachments set created_at = now() - interval '9 years' where guide_id = '00000000-0000-4000-8000-0000000000a1'; raise exception 'owner rewrote an attachment''s created_at';
-  exception when insufficient_privilege then null; end;
+  update public.guide_attachments set created_at = now() - interval '9 years' where guide_id = '00000000-0000-4000-8000-0000000000a1';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'owner rewrote an attachment''s created_at'; end if;
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -274,15 +275,50 @@ begin
   select verified into v from public.guides where id = '00000000-0000-4000-8000-0000000000a1';
   if v then raise exception 'member changed the steps but the guide is still verified'; end if;
 
+  -- 0016: bookkeeping alone (the "edited" flag) keeps both marks.
+  update public.knowledge_articles set edited = true where id = '00000000-0000-4000-8000-0000000000b1';
+  select steps_verified, reviewed into v, r from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000b1';
+  if not (v and r) then raise exception 'a bookkeeping-only update cleared a trust mark'; end if;
+  -- 0016: any content edit clears reviewed (the chatbot trusts reviewed text); only a steps edit clears steps_verified.
   update public.knowledge_articles set title = 'Team article zqxj renamed' where id = '00000000-0000-4000-8000-0000000000b1';
-  select steps_verified into v from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000b1';
+  select steps_verified, reviewed into v, r from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000b1';
   if not v then raise exception 'a title edit cleared steps_verified'; end if;
+  if r then raise exception 'member renamed a reviewed article but it is still reviewed'; end if;
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}', true);
+  update public.knowledge_articles set reviewed = true where id = '00000000-0000-4000-8000-0000000000b1';
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e2","role":"authenticated"}', true);
+  update public.knowledge_articles set tell_customer = 'Rewritten words.' where id = '00000000-0000-4000-8000-0000000000b1';
+  select reviewed into r from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000b1';
+  if r then raise exception 'member rewrote Tell the customer but the article is still reviewed'; end if;
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}', true);
+  update public.knowledge_articles set reviewed = true where id = '00000000-0000-4000-8000-0000000000b1';
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e2","role":"authenticated"}', true);
+  update public.knowledge_articles set sources = '[{"title":"x","url":"https://example.com"}]' where id = '00000000-0000-4000-8000-0000000000b1';
+  select reviewed into r from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000b1';
+  if r then raise exception 'member changed the sources but the article is still reviewed'; end if;
   update public.knowledge_articles set desktop_steps = 'File > Open > Company' where id = '00000000-0000-4000-8000-0000000000b1';
   select steps_verified, reviewed into v, r from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000b1';
   if v then raise exception 'member changed the Desktop steps but they are still checked'; end if;
-  if not r then raise exception 'a steps edit should leave reviewed alone'; end if;
+  if r then raise exception 'a steps edit should also clear reviewed'; end if;
   -- Clearing a mark (as the app does with steps_verified: false) is allowed.
   update public.knowledge_articles set steps_verified = false, cloud_steps = 'Menu > X' where id = '00000000-0000-4000-8000-0000000000b1';
+end $$;
+
+-- The owner's own article edits keep the review mark.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}', true);
+update public.knowledge_articles set reviewed = true where id = '00000000-0000-4000-8000-0000000000b1';
+update public.knowledge_articles set tell_customer = 'Owner words.' where id = '00000000-0000-4000-8000-0000000000b1';
+do $$ begin
+  if not (select reviewed from public.knowledge_articles where id = '00000000-0000-4000-8000-0000000000b1') then raise exception 'owner edit un-reviewed the article'; end if;
+end $$;
+
+-- 0016: members can't edit attachment rows (they add; the owner deletes).
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e2","role":"authenticated"}', true);
+do $$
+declare n int;
+begin
+  update public.guide_attachments set name = 'renamed.png' where guide_id = '00000000-0000-4000-8000-0000000000a1';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'member updated an attachment row'; end if;
 end $$;
 
 -- The owner's own edits keep their marks.
@@ -310,6 +346,10 @@ begin
   exception when insufficient_privilege then null; end;
   update public.accountant_chats set deleted_at = now() where id = '00000000-0000-4000-8000-0000000000c8'; get diagnostics n = row_count; if n <> 1 then raise exception 'member cannot bin own chat'; end if;
   update public.accountant_chats set deleted_at = null where id = '00000000-0000-4000-8000-0000000000c8'; get diagnostics n = row_count; if n <> 1 then raise exception 'member cannot restore own chat'; end if;
+  -- 0016: a message can be updated in your own chat, but never moved into someone else's.
+  update public.accountant_messages set checked = true where chat_id = '00000000-0000-4000-8000-0000000000c8'; get diagnostics n = row_count; if n <> 1 then raise exception 'member cannot update own message'; end if;
+  begin update public.accountant_messages set chat_id = '00000000-0000-4000-8000-0000000000c7' where chat_id = '00000000-0000-4000-8000-0000000000c8'; raise exception 'member moved a message into the owner''s chat';
+  exception when insufficient_privilege then null; end;
 end $$;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}', true);
 do $$
