@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
 import { AttachmentList } from "@/components/guides/attachments";
+import { useIsOwner } from "@/components/shell/team-context";
 import { createGuide, findSimilarGuides, updateGuide, addAttachment } from "@/app/(app)/guides/actions";
 import { splitLines, splitTags, type GuideInput } from "@/lib/guide-schema";
 import { shortProduct } from "@/lib/guide-utils";
@@ -157,6 +158,7 @@ export function GuideForm({
   initial,
   prefill,
   attachments = [],
+  verified = false,
 }: {
   mode: "create" | "edit";
   userId: string;
@@ -166,8 +168,11 @@ export function GuideForm({
   /** New guide only: a search with no matching guide (Insights), or an Accountant chat answer. */
   prefill?: Partial<GuideInput>;
   attachments?: Attachment[];
+  /** Edit only: the guide is currently Verified (a member's change will clear it). */
+  verified?: boolean;
 }) {
   const router = useRouter();
+  const isOwner = useIsOwner();
   const [f, setF] = useState<FormState>(initial ? toFormState(initial) : prefill ? fromPrefill(prefill) : blank);
   const [errors, setErrors] = useState<Errors>({});
   const [files, setFiles] = useState<File[]>([]);
@@ -217,6 +222,11 @@ export function GuideForm({
         title={mode === "create" ? "New guide" : `Edit ${code}`}
         description={mode === "create" ? "Record a fix or how-to so you can find it next time. New guides start as unverified." : "Changes are saved to the guide’s edit history."}
       />
+      {mode === "edit" && verified && !isOwner && (
+        <p role="note" className="mb-4 max-w-3xl text-sm text-muted-foreground">
+          This guide is Verified. Saving changes marks it Unverified until the owner checks it again.
+        </p>
+      )}
 
       <form
         className="flex max-w-3xl flex-col gap-5"

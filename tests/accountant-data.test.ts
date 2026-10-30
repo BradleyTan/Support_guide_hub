@@ -104,7 +104,7 @@ describe("askErrorMessage", () => {
   });
 
   it("tells someone not yet approved that they are waiting", () => {
-    expect(askErrorMessage(403, { error: "not_approved" })).toBe("Your account is waiting for approval.");
+    expect(askErrorMessage(403, { error: "not_approved" })).toBe("Your account isn’t approved to use the chatbot.");
   });
 });
 

@@ -49,3 +49,15 @@ export function groupMembers(rows: TeamMemberRow[]): { pending: TeamMemberRow[];
     inactive: people.filter((r) => r.status === "rejected" || r.status === "removed").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   };
 }
+
+/** Fallback when RLS hides another person's team row (members read only their own). */
+export const UNKNOWN_EDITOR = "a teammate";
+
+/**
+ * Display names for editors, from the team rows the viewer can read. A null id (account deleted) has no name;
+ * an id whose row is hidden or has a blank name reads as "a teammate".
+ */
+export function editorNameFor(userId: string | null, rows: { user_id: string; display_name: string | null }[]): string | undefined {
+  if (!userId) return undefined;
+  return rows.find((r) => r.user_id === userId)?.display_name?.trim() || UNKNOWN_EDITOR;
+}

@@ -65,7 +65,7 @@ export function LoginForm({ next, linkError }: { next: string; linkError?: strin
         <Mark />
         <h1 className="mt-3 text-xl font-semibold">{titles[mode]}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {mode === "forgot" ? "Enter your account email and we’ll send you a link to set a new password." : "Your AutoCount guides, private to you."}
+          {mode === "forgot" ? "Enter your account email and we’ll send you a link to set a new password." : "Your team’s AutoCount guides, in one place."}
         </p>
       </div>
 

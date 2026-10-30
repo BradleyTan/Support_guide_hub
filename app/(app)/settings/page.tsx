@@ -18,7 +18,8 @@ export default async function SettingsPage() {
     getDeletedGuides(),
     getDeletedArticles(),
     getDeletedChats(),
-    supabase.from("user_settings").select("chat_model, chat_web_search").maybeSingle(),
+    // The team row (the owner's), not every settings row the owner can read.
+    supabase.rpc("team_settings").maybeSingle(),
     supabase.from("official_pages").select("url", { count: "exact", head: true }),
     supabase.from("official_pages").select("seen_at").order("seen_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("search_log").select("id", { count: "exact", head: true }),

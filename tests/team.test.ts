@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canUseApp, groupMembers, isOwner, type Membership, type TeamMemberRow } from "@/lib/team-rules";
+import { canUseApp, editorNameFor, groupMembers, isOwner, type Membership, type TeamMemberRow } from "@/lib/team-rules";
 
 const make = (role: Membership["role"], status: Membership["status"]): Membership => ({ role, status, displayName: "Sam" });
 
@@ -57,5 +57,22 @@ describe("groupMembers", () => {
     ]);
     expect(g.pending.map((r) => r.userId)).toEqual(["early", "late"]);
     expect(g.approved.map((r) => r.userId)).toEqual(["a", "noname", "z"]);
+  });
+});
+
+describe("editorNameFor", () => {
+  const rows = [
+    { user_id: "u1", display_name: "  Max Member " },
+    { user_id: "u2", display_name: "   " },
+  ];
+  it("returns the trimmed name of a readable team row", () => {
+    expect(editorNameFor("u1", rows)).toBe("Max Member");
+  });
+  it("falls back to 'a teammate' for a hidden row or a blank name", () => {
+    expect(editorNameFor("u3", rows)).toBe("a teammate");
+    expect(editorNameFor("u2", rows)).toBe("a teammate");
+  });
+  it("has no name when the editor's account was deleted", () => {
+    expect(editorNameFor(null, rows)).toBeUndefined();
   });
 });

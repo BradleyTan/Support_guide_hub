@@ -15,5 +15,5 @@ export default async function EditGuidePage({ params }: PageProps<"/guides/[id]/
   const [user, guide] = await Promise.all([getUser(), getGuide(id)]);
   if (!user) redirect("/login");
   if (!guide) notFound();
-  return <GuideForm mode="edit" userId={user.id} code={guide.id} guideDbId={guide.dbId} initial={guideToInput(guide)} attachments={guide.attachments} />;
+  return <GuideForm mode="edit" userId={user.id} code={guide.id} guideDbId={guide.dbId} initial={guideToInput(guide)} attachments={guide.attachments} verified={guide.verified} />;
 }

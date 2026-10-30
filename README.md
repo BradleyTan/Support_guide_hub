@@ -1,6 +1,6 @@
 # Support Desk for AutoCount
 
-A personal guidelines tool for an AutoCount support consultant: a searchable library of your own fixes and how-tos, search across your guides and AutoCount's official help centres, plus reply and SOP helpers. Tickets stay in Zoho Desk.
+A guidelines tool for an AutoCount support team: a shared, searchable library of the team's fixes and how-tos, search across the team's guides and AutoCount's official help centres, plus reply and SOP helpers. Tickets stay in Zoho Desk.
 
 Everything runs on free tiers and open-source libraries: no paid services, and nothing to run on your PC. The only AI is the **Accountant chat**, which uses Groq’s free plan; everything else works without AI.
 
@@ -19,7 +19,7 @@ Everything runs on free tiers and open-source libraries: no paid services, and n
 
 ## Knowledge hub (no AI)
 
-- A private library of plain-English accounting articles (Basics, Customers, Suppliers, Bank & cash, Stock, Reports, Tax, Period-end). Each article opens with **Tell the customer**, two or three sentences to say or paste to a client, then what it is, an RM example, **In AutoCount** (Desktop and Cloud, each marked **Needs verification** until you tick "I’ve checked these menu paths", or "Not found in a source yet — add it once checked"), common mistakes, related topics and sources.
+- A team library of plain-English accounting articles (Basics, Customers, Suppliers, Bank & cash, Stock, Reports, Tax, Period-end). Each article opens with **Tell the customer**, two or three sentences to say or paste to a client, then what it is, an RM example, **In AutoCount** (Desktop and Cloud, each marked **Needs verification** until you tick "I’ve checked these menu paths", or "Not found in a source yet — add it once checked"), common mistakes, related topics and sources.
 - **36 starter articles** live in `lib/knowledge/starter/` (reviewable in git). **Add starter articles** lists the ones you don't have; only the ticked ones are added. An article you deleted (in the bin or already removed) is never added back by itself. Starter articles start as "Not reviewed yet".
 - Desktop menu paths are empty in the starter set: the AutoCount wiki couldn't be read (503), so fill them in as you confirm them. Cloud paths come from the AutoCount Cloud help centre. Tax facts are dated "as of October 2026" and link to LHDN, Royal Malaysian Customs and the Ministry of Finance.
 - When a starter article is corrected in a later version, an article you haven't edited shows **Newer version available → Update**; edited articles are never changed.
@@ -29,7 +29,7 @@ Everything runs on free tiers and open-source libraries: no paid services, and n
 
 - The owner is bradleytan119@gmail.com. Others sign up with their name, confirm their email and wait on `/waiting` until the owner approves them on `/team` (owner only). The owner is emailed "New sign-up waiting: <name>" through the `notify-owner` Edge Function.
 - **Members** can view, add and edit guides, analyses, SOPs, templates and Knowledge hub articles, and use the Accountant chat. **Only the owner** verifies guides, deletes and restores, changes Settings and exports. Chats are private to each person.
-- **Remove access** on `/team` stops someone signing in to the shared library; their work is kept.
+- **Remove access** on `/team` shuts someone out of the shared library: they can still sign in, but only reach the waiting page (`/waiting`) and see no data. Their work is kept.
 - Setup (SMTP secrets, URL settings, turning sign-ups on, testing with a second email): the **Team** section of [docs/GO-LIVE.md](docs/GO-LIVE.md).
 
 ## Replies, SOPs and templates (no AI)
@@ -57,7 +57,7 @@ Solution: Check the TIN with the Search TIN function. …
 - **Insights** (sidebar; under **More** on a phone) shows the last 12 weeks: guides opened, searches, searches that found none of your guides, guides added and edited, as a weekly chart with a table view.
 - **Search gaps:** things you searched for at least twice where the latest search matched none of your guides, with **Write a guide** (title prefilled) or a note when a guide written since then may cover it. Home shows the top three.
 - **Library health:** guides per product and verified share; guides not verified, missing a cause or fix steps, not edited for over a year, or not opened in 90 days.
-- **What is logged:** opening a guide, and searches made without filters (repeats within 30 minutes count once). Both logs are private to you (RLS) and deleted after 90 days by the nightly `activity-log-cleanup` job. **Settings → Privacy → Clear search history** deletes your searches at once.
+- **What is logged:** opening a guide, and searches made without filters (repeats within 30 minutes count once). Both logs are shared with the team (every approved member sees the same Insights) and deleted after 90 days by the nightly `activity-log-cleanup` job. The owner's **Settings → Privacy → Clear team search history** deletes the whole team's searches at once.
 - Opening a guide no longer changes its “last updated” date; only content edits do.
 
 ## Accounting analyst (free, no AI)
@@ -102,7 +102,7 @@ No secret key is used by the app. Every database call runs as the signed-in user
 
 ## Database
 
-- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables; 0011 Knowledge hub; 0012 Accountant chat and the guide Platform field; 0013 Winflector and GO-Global products; 0014 team membership and RLS; 0015 owner notification on new sign-ups). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security restricts each user to their own rows. `official_pages` is shared public information: signed-in users can read it; only the refresh function writes.
+- Migrations in `supabase/migrations/` (0001 schema and RLS; 0002 duplicate finder and view counter; 0003 guide search; 0004–0005 official index and schedule; 0006–0007 activity log and insights; 0008 saved SOPs; 0009 nightly bin clean-up; 0010 removes the old version-notes tables; 0011 Knowledge hub; 0012 Accountant chat and the guide Platform field; 0013 Winflector and GO-Global products; 0014 team membership and RLS; 0015 owner notification on new sign-ups; 0016 team follow-ups: member edits clear an article's Reviewed mark, tighter attachment and chat-message policies, `updated_by` indexes). Every user table has `user_id`, created/updated timestamps and soft delete (`deleted_at`); Row Level Security shares the library (guides, knowledge, analyses, SOPs, templates, activity logs) with every approved team member; only the owner deletes, restores from the bin or sets the trust marks, and Accountant chats stay private to each person. Pending, rejected and removed accounts see nothing. `official_pages` is readable by approved members only; only the refresh function writes.
 - Edge Functions in `supabase/functions/` (`embed`, `refresh-official`, `purge-bin`, `ask-accountant`, `notify-owner`). Code shared by the app and `ask-accountant` lives in `lib/accountant/core/`; run `npm run sync:core` after changing it (a unit test fails if the copy in `supabase/functions/_shared/` drifts), then redeploy the function.
 - **Bin:** deleted items stay restorable for 30 days; every night at 03:45 Malaysia time the `purge-bin` job removes older ones for good (guides together with their files). The function only accepts calls carrying a secret kept in the database Vault, which only the scheduled job sends.
 - Files go to the private `attachments` storage bucket under `<user_id>/…`, max 10 MB.

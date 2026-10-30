@@ -42,6 +42,8 @@ export interface Attachment {
 export interface Revision {
   at: string; // ISO datetime
   summary: string;
+  /** Who made the change ("a teammate" if the name can't be read); unset when unknown. */
+  by?: string;
 }
 
 /** A reusable troubleshooting or how-to guideline. */

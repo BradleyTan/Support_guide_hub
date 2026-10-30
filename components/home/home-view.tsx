@@ -92,10 +92,10 @@ export function HomeView({ guides, opened, gaps }: { guides: Guide[]; opened: Op
   const header = (
     <PageHeader
       title="Guidelines"
-      description="Your own AutoCount fixes and how-tos, searchable in one place. Tickets stay in Zoho Desk."
+      description="Your team’s AutoCount fixes and how-tos, searchable in one place. Tickets stay in Zoho Desk."
       howItWorks={
         <>
-          Search covers <strong>your guides</strong> and the <strong>official AutoCount help centres</strong>. “Most opened” counts how often you opened each guide in the last {ACTIVITY_DAYS} days; <strong>Insights</strong> has the full picture, including searches that found no guide.
+          Search covers <strong>the team’s guides</strong> and the <strong>official AutoCount help centres</strong>. “Most opened” counts how often the team opened each guide in the last {ACTIVITY_DAYS} days; <strong>Insights</strong> has the full picture, including searches that found no guide.
         </>
       }
     />
@@ -274,7 +274,7 @@ function SearchFirst({ guides, opened, gaps }: { guides: Guide[]; opened: Opened
             ) : (
               <p className="flex items-start gap-2 px-2 py-2 text-xs text-muted-foreground">
                 <ChartColumn className="mt-0.5 size-3.5 shrink-0" />
-                Searches you repeat that find none of your guides will show up here.
+                Searches the team repeats that find none of the team’s guides will show up here.
               </p>
             )}
           </Section>

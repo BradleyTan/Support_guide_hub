@@ -83,10 +83,10 @@ export function InsightsView({ insights }: { insights: Insights }) {
     <>
       <PageHeader
         title="Insights"
-        description={`How you’ve used your guide library over the last ${ACTIVITY_DAYS} days, and where it has gaps. Only you can see this.`}
+        description={`How the team has used the guide library over the last ${ACTIVITY_DAYS} days, and where it has gaps. Everyone on the team sees the same figures.`}
         howItWorks={
           <>
-            Opening a guide and searching (without filters) are logged to your account. Repeating the same search within 30 minutes counts once. Logs older than {ACTIVITY_DAYS} days are deleted every night, and you can clear your search history in Settings. A <strong>search gap</strong> is something you searched for at least twice where your latest search found none of your guides.
+            Opening a guide and searching (without filters) are logged for the whole team. Repeating the same search within 30 minutes counts once. Logs older than {ACTIVITY_DAYS} days are deleted every night, and the owner can clear the team’s search history in Settings. A <strong>search gap</strong> is something the team searched for at least twice where the latest search found none of the team’s guides.
           </>
         }
       />
@@ -157,7 +157,7 @@ export function InsightsView({ insights }: { insights: Insights }) {
           <Section id="gaps" title={`Search gaps (${gaps.length})`}>
             {gaps.length === 0 ? (
               <EmptyState icon={SearchCheck} title="No search gaps">
-                When you search for the same thing at least twice and none of your guides match, it shows up here so you can write that guide.
+                When the team searches for the same thing at least twice and none of the team’s guides match, it shows up here so someone can write that guide.
               </EmptyState>
             ) : (
               <ul className="divide-y">

@@ -37,7 +37,7 @@ export function KnowledgeList({ articles, missing }: { articles: KnowledgeArticl
         }
         howItWorks={
           <>
-            Each article starts with <strong>Tell the customer</strong>: two or three sentences you can say or paste straight away. Below that: what it is, an example, where it is in AutoCount (Desktop and Cloud, marked <strong>Needs verification</strong> until you confirm), common mistakes and sources. Starter articles are added only when you tick them, and stay “Not reviewed yet” until you check them. Everything is private to your account; no AI is used.
+            Each article starts with <strong>Tell the customer</strong>: two or three sentences you can say or paste straight away. Below that: what it is, an example, where it is in AutoCount (Desktop and Cloud, marked <strong>Needs verification</strong> until you confirm), common mistakes and sources. Starter articles are added only when you tick them, and stay “Not reviewed yet” until you check them. Articles are shared with your team; no AI is used.
           </>
         }
       />

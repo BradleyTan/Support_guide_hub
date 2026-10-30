@@ -9,9 +9,10 @@ import type { CheckedAnswer } from "@/lib/accountant/core/answer";
 import type { MaskMap } from "@/lib/accountant/core/mask";
 import { analysisResultSchema } from "@/lib/analysis-schema";
 import type { Analysis, Attachment, Category, Confidence, Guide, Platform, Product, Template, TemplateKind } from "@/lib/types";
+import { editorNameFor } from "@/lib/team-rules";
 import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
 
-/** Server-side reads. Every query runs as the signed-in user, so RLS limits results to their own rows. */
+/** Server-side reads. Every query runs as the signed-in user, so RLS applies (shared team data; private chats). */
 
 export function rowToGuide(r: Tables<"guides">, extra?: { attachments?: Attachment[]; revisions?: Guide["revisions"] }): Guide {
   return {
@@ -51,8 +52,19 @@ const asRow = (r: GuideRow) => ({ ...r, embedding: null, fts: null }) as Tables<
  */
 async function editorName(supabase: Awaited<ReturnType<typeof createClient>>, updatedBy: string | null): Promise<string | undefined> {
   if (!updatedBy) return undefined;
-  const { data } = await supabase.from("team_members").select("display_name").eq("user_id", updatedBy).maybeSingle();
-  return data?.display_name?.trim() || "a teammate";
+  const { data } = await supabase.from("team_members").select("user_id, display_name").eq("user_id", updatedBy).maybeSingle();
+  return editorNameFor(updatedBy, data ? [data] : []);
+}
+
+/** Names for several editors in one query (same RLS rule as editorName). */
+async function editorNames(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  ids: (string | null)[],
+): Promise<(id: string | null) => string | undefined> {
+  const wanted = [...new Set(ids.filter((id): id is string => !!id))];
+  const { data } = wanted.length ? await supabase.from("team_members").select("user_id, display_name").in("user_id", wanted) : { data: [] };
+  const rows = data ?? [];
+  return (id) => editorNameFor(id, rows);
 }
 
 export const getGuides = cache(async (): Promise<Guide[]> => {
@@ -70,15 +82,17 @@ export const getGuide = cache(async (code: string): Promise<Guide | null> => {
   const r = row as GuideRow;
   const [att, rev, pins] = await Promise.all([
     supabase.from("guide_attachments").select("id, name, kind, size_bytes").eq("guide_id", r.id).order("created_at"),
-    supabase.from("guide_revisions").select("created_at, summary").eq("guide_id", r.id).order("created_at"),
+    supabase.from("guide_revisions").select("created_at, summary, user_id").eq("guide_id", r.id).order("created_at"),
     supabase.from("pins").select("id, title, url, site").eq("guide_id", r.id).order("created_at"),
   ]);
-  const updatedByName = await editorName(supabase, r.updated_by);
+  const revisions = rev.data ?? [];
+  const nameOf = await editorNames(supabase, [r.updated_by, ...revisions.map((v) => v.user_id)]);
+  const updatedByName = nameOf(r.updated_by);
   return {
     updatedByName,
     ...rowToGuide(asRow(r), {
       attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
-      revisions: (rev.data ?? []).map((v) => ({ at: v.created_at, summary: v.summary })),
+      revisions: revisions.map((v) => ({ at: v.created_at, summary: v.summary, by: nameOf(v.user_id) })),
     }),
     pins: pins.data ?? [],
   };

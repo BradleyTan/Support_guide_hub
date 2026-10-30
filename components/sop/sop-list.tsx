@@ -25,7 +25,7 @@ export function SopList({ sops, guides }: { sops: Sop[]; guides: Guide[] }) {
         description="Step-by-step procedures for clients, built from a guide and saved as a PDF."
         howItWorks={
           <>
-            Start from a guide: its fix steps become the SOP’s steps, and its product, version and module the scope. Edit the wording, reorder steps, add a screenshot from the guide under any step, and list the checks to do at the end. SOPs are saved to your account; <strong>Print / Save as PDF</strong> opens a clean page for your browser’s “Save as PDF”.
+            Start from a guide: its fix steps become the SOP’s steps, and its product, version and module the scope. Edit the wording, reorder steps, add a screenshot from the guide under any step, and list the checks to do at the end. SOPs are shared with your team; <strong>Print / Save as PDF</strong> opens a clean page for your browser’s “Save as PDF”.
           </>
         }
       />

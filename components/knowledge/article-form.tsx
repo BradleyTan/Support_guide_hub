@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/shared/page-header";
+import { useIsOwner } from "@/components/shell/team-context";
 import { createArticle, updateArticle } from "@/app/(app)/knowledge/actions";
 import { KNOWLEDGE_CATEGORIES, type ArticleInput, type KnowledgeArticle, type KnowledgeCategory, type Source } from "@/lib/knowledge/model";
 
@@ -46,6 +47,7 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
 
 export function ArticleForm({ article, relatedOptions }: { article?: KnowledgeArticle; relatedOptions: { slug: string; title: string }[] }) {
   const router = useRouter();
+  const isOwner = useIsOwner();
   const [title, setTitle] = useState(article?.title ?? "");
   const [category, setCategory] = useState<KnowledgeCategory>(article?.category ?? "Basics");
   const [tellCustomer, setTellCustomer] = useState(article?.tellCustomer ?? "");
@@ -79,6 +81,11 @@ export function ArticleForm({ article, relatedOptions }: { article?: KnowledgeAr
         title={article ? `Edit: ${article.title}` : "New article"}
         description={article?.starterSlug ? "This is a starter article. Once you save changes, newer starter versions won’t replace your text." : "Write an explanation in your own words."}
       />
+      {article?.reviewed && !isOwner && (
+        <p role="note" className="mb-4 max-w-3xl text-sm text-muted-foreground">
+          This article is Reviewed. Saving changes marks it Not reviewed until the owner checks it again.
+        </p>
+      )}
       <div className="flex max-w-3xl flex-col gap-5">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem]">
           <Field id="kb-title" label="Title" error={errors.title}>

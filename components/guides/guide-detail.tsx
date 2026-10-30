@@ -260,7 +260,10 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
             <ol className="space-y-2 border-l pl-3">
               {[...g.revisions].reverse().map((r, i) => (
                 <li key={`${r.at}-${i}`}>
-                  <span className="block text-xs text-muted-foreground">{formatDateTime(r.at)}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {formatDateTime(r.at)}
+                    {r.by && ` · ${r.by}`}
+                  </span>
                   {r.summary}
                 </li>
               ))}
