@@ -464,6 +464,7 @@ export type Database = {
       is_owner: { Args: Record<PropertyKey, never>; Returns: boolean };
       owner_name: { Args: Record<PropertyKey, never>; Returns: string | null };
       team_member_names: { Args: { p_ids: string[] }; Returns: { user_id: string; display_name: string }[] };
+      set_my_display_name: { Args: { p_name: string }; Returns: string };
       team_settings: { Args: Record<PropertyKey, never>; Returns: { chat_model: string; chat_web_search: boolean }[] };
       team_answers_today: { Args: Record<PropertyKey, never>; Returns: number };
       e2e_cleanup: { Args: Record<PropertyKey, never>; Returns: number };

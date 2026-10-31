@@ -8,7 +8,7 @@ import { restoreArticle } from "@/app/(app)/knowledge/actions";
 import { restoreChat } from "@/app/(app)/chat/actions";
 import type { KnowledgeArticle } from "@/lib/knowledge/model";
 import { clearSearchHistory } from "@/app/(app)/insights/actions";
-import { exportEverything, saveChatSettings } from "@/app/(app)/settings/actions";
+import { exportEverything, saveChatSettings, saveDisplayName } from "@/app/(app)/settings/actions";
 import { downloadXlsx } from "@/lib/download-xlsx";
 import { exportFileName } from "@/lib/export";
 import { ACTIVITY_DAYS } from "@/lib/insights";
@@ -264,9 +264,37 @@ function DeletedChats({ chats }: { chats: { id: string; title: string; deletedAt
   );
 }
 
-function PasswordCard() {
+function DisplayName({ initial }: { initial: string }) {
+  const router = useRouter();
+  const [name, setName] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  return (
+    <Row title="Your name" description="How teammates see you in “Last edited by”, edit history and the Team page.">
+      <form
+        className="flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setSaving(true);
+          const res = await saveDisplayName(name);
+          setSaving(false);
+          if (!res.ok) return void toast.error(res.error);
+          toast.success("Name saved");
+          router.refresh();
+        }}
+      >
+        <Input aria-label="Your name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+        <Button type="submit" variant="outline" disabled={saving || !name.trim() || name.trim() === initial}>
+          Save
+        </Button>
+      </form>
+    </Row>
+  );
+}
+
+function AccountCard({ displayName }: { displayName: string }) {
   return (
     <Card title="Account">
+      <DisplayName initial={displayName} />
       <Row title="Password" description="Change the password you use to sign in. If you forget it, use “Forgot password?” on the sign-in page.">
         <ButtonLink variant="outline" href="/reset-password">
           <KeyRound /> Change password
@@ -283,6 +311,7 @@ export function SettingsView({
   chat,
   indexed,
   searchesLogged,
+  displayName,
 }: {
   deleted: Guide[];
   deletedArticles: KnowledgeArticle[];
@@ -290,6 +319,7 @@ export function SettingsView({
   chat: { model: string; webSearch: boolean };
   indexed: { count: number; lastRefreshed: string | null };
   searchesLogged: number;
+  displayName: string;
 }) {
   const isOwner = useIsOwner();
   if (!isOwner) {
@@ -300,7 +330,7 @@ export function SettingsView({
           <Card title="Accountant chat">
             <DeletedChats chats={deletedChats} />
           </Card>
-          <PasswordCard />
+          <AccountCard displayName={displayName} />
         </div>
       </>
     );
@@ -358,7 +388,7 @@ export function SettingsView({
           </div>
         </Card>
 
-        <PasswordCard />
+        <AccountCard displayName={displayName} />
 
         <Card title="Your data">
           <Row title="Export everything" description="Guides, analyses, SOPs, templates and Knowledge hub articles as one Excel file, one sheet each. Items in the bin aren’t included.">
