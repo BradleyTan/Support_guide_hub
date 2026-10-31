@@ -47,24 +47,22 @@ type GuideRow = Omit<Tables<"guides">, "embedding" | "fts">;
 const asRow = (r: GuideRow) => ({ ...r, embedding: null, fts: null }) as Tables<"guides">;
 
 /**
- * "Last edited by" name. A member can read only their own team_members row (the owner reads all), so another
- * person's name comes back as "a teammate" when RLS hides it.
+ * Names for several editors in one query. team_member_names() returns display names (not emails) to any approved
+ * member; a blank name or a failed lookup reads as "a teammate".
  */
-async function editorName(supabase: Awaited<ReturnType<typeof createClient>>, updatedBy: string | null): Promise<string | undefined> {
-  if (!updatedBy) return undefined;
-  const { data } = await supabase.from("team_members").select("user_id, display_name").eq("user_id", updatedBy).maybeSingle();
-  return editorNameFor(updatedBy, data ? [data] : []);
-}
-
-/** Names for several editors in one query (same RLS rule as editorName). */
 async function editorNames(
   supabase: Awaited<ReturnType<typeof createClient>>,
   ids: (string | null)[],
 ): Promise<(id: string | null) => string | undefined> {
   const wanted = [...new Set(ids.filter((id): id is string => !!id))];
-  const { data } = wanted.length ? await supabase.from("team_members").select("user_id, display_name").in("user_id", wanted) : { data: [] };
+  const { data } = wanted.length ? await supabase.rpc("team_member_names", { p_ids: wanted }) : { data: [] };
   const rows = data ?? [];
   return (id) => editorNameFor(id, rows);
+}
+
+/** "Last edited by" name for one editor. */
+async function editorName(supabase: Awaited<ReturnType<typeof createClient>>, updatedBy: string | null): Promise<string | undefined> {
+  return (await editorNames(supabase, [updatedBy]))(updatedBy);
 }
 
 export const getGuides = cache(async (): Promise<Guide[]> => {
