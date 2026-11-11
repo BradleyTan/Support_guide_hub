@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The screenshot-reading engine, copied from node_modules (see scripts/copy-ocr-assets.mjs).
+    "public/ocr/**",
   ]),
 ]);
 

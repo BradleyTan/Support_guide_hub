@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { useIsOwner } from "@/components/shell/team-context";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
+import { ScreenshotButton, useScreenshotReader } from "@/components/search/screenshot-reader";
 import { countBy, recentlyUpdated, shortProduct, topTags, unverified } from "@/lib/guide-utils";
 import { ACTIVITY_DAYS, newGuideHref, type OpenedGuide, type SearchGap } from "@/lib/insights";
 import { formatDate } from "@/lib/format";
@@ -32,6 +33,7 @@ const exampleSearches = ["SQL Server not found", "PCB bonus", "e-Invoice TIN", "
 function SearchBox({ large = false }: { large?: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const screenshot = useScreenshotReader((text) => router.push(`/search?q=${encodeURIComponent(text)}`));
   return (
     <form
       role="search"
@@ -57,6 +59,7 @@ function SearchBox({ large = false }: { large?: boolean }) {
       <Button type="submit" size={large ? "lg" : "default"} className={large ? "h-12 px-5" : undefined}>
         Search
       </Button>
+      <ScreenshotButton reading={screenshot.reading} onFile={screenshot.read} className={large ? "h-12" : undefined} />
     </form>
   );
 }

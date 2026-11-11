@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { PageHeader } from "@/components/shared/page-header";
 import { Tag, VerifiedBadge } from "@/components/shared/badges";
 import { EmptyState } from "@/components/shared/states";
+import { ScreenshotButton, useScreenshotReader } from "@/components/search/screenshot-reader";
 import { pinToGuide, searchChats, searchKnowledge, searchMyGuides, searchOfficialSources, type ChatHit, type GuideHit, type KnowledgeHit, type MatchSource, type OfficialResult, type SearchFilters } from "@/app/(app)/search/actions";
 import { googleFallbackUrl, HELP_CENTRES, OTHER_OFFICIAL_SITES, type OfficialHit } from "@/lib/official-sites";
 import { shortProduct } from "@/lib/guide-utils";
@@ -159,6 +160,8 @@ export function SearchView({
     if (query) run(query, f);
   }
 
+  const screenshot = useScreenshotReader((q) => submit(q));
+
   const activeFilters = Object.values(filters).filter((v) => v !== null && v !== undefined && v !== "").length;
   const hasQuery = query.trim().length > 0;
 
@@ -169,6 +172,7 @@ export function SearchView({
         description="Search your guides and official AutoCount sources at the same time. Paste an error message exactly as it appears for the best match."
         howItWorks={
           <>
+            Got a <strong>screenshot</strong> of the error? Paste it (Ctrl+V) or use the Screenshot button: the text in it is read here in your browser and searched. The image isn’t uploaded or saved.{" "}
             Both lists match on the same words, similar spelling and similar meaning. <strong>Official sources</strong> are the AutoCount Cloud Accounting and HRMS help centres ({HELP_CENTRES.map((h) => h.domain).join(", ")}),
             refreshed daily from their published article lists. They’re written for AutoCount’s cloud products, so menus can differ from desktop AutoCount. The AutoCount website and wiki are offered as Google searches.
           </>
@@ -189,11 +193,12 @@ export function SearchView({
           </label>
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input id="q" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Describe the problem or paste the error text" className="h-10 bg-card pl-9" maxLength={1000} />
+            <Input id="q" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Describe the problem, or paste the error text or a screenshot" className="h-10 bg-card pl-9" maxLength={1000} />
           </div>
           <Button type="submit" className="h-10">
             Search
           </Button>
+          <ScreenshotButton reading={screenshot.reading} onFile={screenshot.read} className="h-10" />
           <Button type="button" variant="outline" className="h-10" aria-label="Filters" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}>
             <SlidersHorizontal /> <span className="hidden sm:inline">Filters</span>
             {activeFilters > 0 && <span className="num rounded-full bg-primary px-1.5 text-[11px] text-primary-foreground">{activeFilters}</span>}

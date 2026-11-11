@@ -99,6 +99,7 @@ No secret key is used by the app. Every database call runs as the signed-in user
 - **Meaning vectors** come from Supabase's built-in `gte-small` model through the `embed` Edge Function, so guide text never leaves your Supabase project. They're made when a guide is saved or imported, and missing ones are filled in during searches.
 - **Official sources:** the AutoCount Cloud Accounting and HRMS help centres are indexed from their **published sitemaps** (allowed by their robots.txt; their `/support/search` pages are disallowed and never used). The `refresh-official` Edge Function reads the sitemaps daily (Supabase `pg_cron` job `official-pages-sync`, 03:00 Malaysia time) and reads a few new/changed article pages every 2 minutes (`official-pages-details`) for titles, summaries and vectors. The AutoCount website and wiki are offered as Google searches limited to those sites.
 - Official articles can be **pinned** to a guide from Search and appear on the guide page.
+- **Search by screenshot:** on Search and Home, paste an image (Ctrl+V) or use the **Screenshot** button. The text is read in the browser with [tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0, English only) and put in the search box; the image is never uploaded or saved. The engine files are copied from `node_modules` into `public/ocr/` before `dev` and `build` (`scripts/copy-ocr-assets.mjs`, not committed), so they're served by the app itself and no outside site is contacted. Clear screenshots read well; photos of a screen are hit and miss.
 
 ## Database
 
