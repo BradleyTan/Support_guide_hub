@@ -11,10 +11,10 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { ProductLabel, Tag, VerifiedBadge } from "@/components/shared/badges";
 import { useIsOwner } from "@/components/shell/team-context";
 import { AttachmentList } from "@/components/guides/attachments";
-import { deleteGuide, restoreGuide, setVerified } from "@/app/(app)/guides/actions";
+import { deleteGuide, restoreGuide, restoreGuideVersion, setVerified } from "@/app/(app)/guides/actions";
 import { searchGuides, shortProduct } from "@/lib/guide-utils";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { PLATFORM_LABELS, type Guide } from "@/lib/types";
+import { PLATFORM_LABELS, type Guide, type Revision } from "@/lib/types";
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -22,6 +22,81 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
       <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
       {children}
     </section>
+  );
+}
+
+/** One edit-history entry: who and when, what changed (on request), and for the owner, a way to undo it. */
+function HistoryEntry({ revision: r, code, canRestore }: { revision: Revision; code: string; canRestore: boolean }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [pending, start] = useTransition();
+  return (
+    <li>
+      <span className="block text-xs text-muted-foreground">
+        {formatDateTime(r.at)}
+        {r.by && ` · ${r.by}`}
+      </span>
+      {r.summary}
+      {(r.changes || (canRestore && r.restorable)) && (
+        <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
+          {r.changes && (
+            <button type="button" className="text-primary hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>
+              {open ? "Hide changes" : "Show changes"}
+            </button>
+          )}
+          {canRestore && r.restorable && (
+            <button type="button" className="text-primary hover:underline" onClick={() => setConfirming(true)}>
+              Restore version before this edit
+            </button>
+          )}
+        </div>
+      )}
+      {open && r.changes && (
+        <dl className="mt-2 space-y-2 text-xs">
+          {r.changes.map((c) => (
+            <div key={c.field}>
+              <dt className="font-medium">{c.field}</dt>
+              <dd className="mt-0.5 rounded bg-destructive/[0.06] px-1.5 py-1 break-words whitespace-pre-wrap text-muted-foreground line-through decoration-destructive/40">
+                <span className="sr-only">Before: </span>
+                {c.before || "(empty)"}
+              </dd>
+              <dd className="mt-0.5 rounded bg-primary/[0.08] px-1.5 py-1 break-words whitespace-pre-wrap">
+                <span className="sr-only">After: </span>
+                {c.after || "(empty)"}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore this earlier version?</DialogTitle>
+            <DialogDescription>
+              The guide goes back to how it was just before the edit on {formatDateTime(r.at)}. Your current version stays in the edit history, so you can restore it again later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              disabled={pending || !r.id}
+              onClick={() =>
+                start(async () => {
+                  const res = await restoreGuideVersion(code, r.id!);
+                  if (!res.ok) return void toast.error(res.error);
+                  toast.success("Earlier version restored");
+                  setConfirming(false);
+                  router.refresh();
+                })
+              }
+            >
+              {pending && <Loader2 className="animate-spin" />} Restore
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </li>
   );
 }
 
@@ -259,13 +334,7 @@ export function GuideDetail({ guide: g, allGuides, userId }: { guide: Guide; all
             <h2 className="font-medium">Edit history</h2>
             <ol className="space-y-2 border-l pl-3">
               {[...g.revisions].reverse().map((r, i) => (
-                <li key={`${r.at}-${i}`}>
-                  <span className="block text-xs text-muted-foreground">
-                    {formatDateTime(r.at)}
-                    {r.by && ` · ${r.by}`}
-                  </span>
-                  {r.summary}
-                </li>
+                <HistoryEntry key={r.id ?? `${r.at}-${i}`} revision={r} code={g.id} canRestore={isOwner} />
               ))}
             </ol>
             <p className="text-xs text-muted-foreground">Created {formatDate(g.createdAt)}</p>

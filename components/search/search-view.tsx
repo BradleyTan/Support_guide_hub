@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { Fragment, useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { BookText, ExternalLink, Globe, GraduationCap, Loader2, MessagesSquare, Pin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { pinToGuide, searchChats, searchKnowledge, searchMyGuides, searchOfficia
 import { googleFallbackUrl, HELP_CENTRES, OTHER_OFFICIAL_SITES, type OfficialHit } from "@/lib/official-sites";
 import { shortProduct } from "@/lib/guide-utils";
 import { formatDate } from "@/lib/format";
+import { foundIn, highlightParts, queryTerms } from "@/lib/highlight";
 import { PRODUCTS, type Product } from "@/lib/types";
 
 const MATCH_LABEL: Record<MatchSource, string> = { words: "Same words", fuzzy: "Similar spelling", meaning: "Similar meaning" };
@@ -31,6 +32,25 @@ const PERIODS = [
 ];
 
 type OfficialState = OfficialResult | null;
+
+/** Text with the search words marked. */
+function Highlighted({ text, terms }: { text: string; terms: string[] }) {
+  return highlightParts(text, terms).map((p, i) =>
+    p.hit ? (
+      <mark key={i} className="rounded-sm bg-primary/15 px-0.5 text-inherit">
+        {p.text}
+      </mark>
+    ) : (
+      <Fragment key={i}>{p.text}</Fragment>
+    ),
+  );
+}
+
+/** "Found in: error message, fix steps" for a guide that matched on the search words. */
+function FoundIn({ fields }: { fields: string[] }) {
+  if (!fields.length) return null;
+  return <p className="mt-1 text-xs text-muted-foreground">Found in: {fields.join(", ")}</p>;
+}
 
 function SectionTitle({ id, icon: Icon, title, meta }: { id: string; icon: typeof BookText; title: string; meta?: React.ReactNode }) {
   return (
@@ -161,6 +181,9 @@ export function SearchView({
   }
 
   const screenshot = useScreenshotReader((q) => submit(q));
+
+  // The words of the search that ran (not what's being typed), for marking matches in the results.
+  const terms = useMemo(() => queryTerms(query), [query]);
 
   const activeFilters = Object.values(filters).filter((v) => v !== null && v !== undefined && v !== "").length;
   const hasQuery = query.trim().length > 0;
@@ -302,9 +325,9 @@ export function SearchView({
               {knowledge.map((k) => (
                 <li key={k.id}>
                   <Link href={`/knowledge/${k.id}`} className="group block rounded-lg border bg-card p-3 transition-colors hover:border-primary/50">
-                    <span className="block text-sm font-medium break-words group-hover:underline">{k.title}</span>
+                    <span className="block text-sm font-medium break-words group-hover:underline"><Highlighted text={k.title} terms={terms} /></span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">{k.category}</span>
-                    <span className="mt-1 line-clamp-2 block text-sm break-words text-muted-foreground">{k.tellCustomer}</span>
+                    <span className="mt-1 line-clamp-2 block text-sm break-words text-muted-foreground"><Highlighted text={k.tellCustomer} terms={terms} /></span>
                   </Link>
                 </li>
               ))}
@@ -318,7 +341,7 @@ export function SearchView({
               {chats.map((c) => (
                 <li key={c.id}>
                   <Link href={`/chat/${c.id}`} className="group block rounded-lg border bg-card p-3 transition-colors hover:border-primary/50">
-                    <span className="block text-sm font-medium break-words group-hover:underline">{c.title}</span>
+                    <span className="block text-sm font-medium break-words group-hover:underline"><Highlighted text={c.title} terms={terms} /></span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">Accountant chat · {formatDate(c.updatedAt)}</span>
                   </Link>
                 </li>
@@ -364,8 +387,15 @@ export function SearchView({
                         {g.version && ` · v${g.version}`}
                         <VerifiedBadge verified={g.verified} className="ml-auto" />
                       </div>
-                      <p className="mt-1 font-medium group-hover:underline">{g.title}</p>
-                      {g.errorMessage && <p className="mt-1 line-clamp-1 font-mono text-xs text-muted-foreground">{g.errorMessage}</p>}
+                      <p className="mt-1 font-medium group-hover:underline">
+                        <Highlighted text={g.title} terms={terms} />
+                      </p>
+                      {g.errorMessage && (
+                        <p className="mt-1 line-clamp-1 font-mono text-xs text-muted-foreground">
+                          <Highlighted text={g.errorMessage} terms={terms} />
+                        </p>
+                      )}
+                      <FoundIn fields={foundIn(g, terms)} />
                       <div className="mt-2 flex flex-wrap items-center gap-1">
                         {g.matchedBy.map((m) => (
                           <span key={m} className="inline-flex h-5 items-center rounded bg-accent px-1.5 text-[11px] text-accent-foreground">
@@ -408,13 +438,20 @@ export function SearchView({
                   <li key={r.url} className="flex gap-3 p-3">
                     <div className="min-w-0 flex-1">
                       <a href={r.url} target="_blank" rel="noreferrer" className="inline-flex items-start gap-1 font-medium text-primary hover:underline">
-                        {r.title} <ExternalLink className="mt-1 size-3 shrink-0" />
+                        <span>
+                          <Highlighted text={r.title} terms={terms} />
+                        </span>{" "}
+                        <ExternalLink className="mt-1 size-3 shrink-0" />
                       </a>
                       <p className="truncate text-xs text-muted-foreground">
                         {r.site}
                         {r.lastmod && ` · updated ${formatDate(r.lastmod)}`}
                       </p>
-                      {r.snippet && <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{r.snippet}</p>}
+                      {r.snippet && (
+                        <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
+                          <Highlighted text={r.snippet} terms={terms} />
+                        </p>
+                      )}
                       {r.matchedBy && r.matchedBy.length > 0 && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {r.matchedBy.map((m) => (

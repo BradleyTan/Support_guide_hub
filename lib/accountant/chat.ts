@@ -48,12 +48,34 @@ export function unmaskAnswer(checked: CheckedAnswer, map: MaskMap): CheckedAnswe
 }
 
 /** What to tell the user when ask-accountant fails. Their typed message always stays in the box. */
+/** "about 8 minutes", "about 2 hours", or "later today" when Groq gave no time. */
+function waitText(seconds: number | undefined): string {
+  const s = Number(seconds);
+  if (!s || s <= 0) return "later today";
+  const minutes = Math.max(1, Math.ceil(s / 60));
+  if (minutes < 90) return `in about ${minutes} minute${minutes === 1 ? "" : "s"}`;
+  return `in about ${Math.ceil(minutes / 60)} hours`;
+}
+
 export function askErrorMessage(status: number, body: unknown): string {
   const b = (body && typeof body === "object" ? body : {}) as { error?: string; retryAfter?: number };
+  // Named errors first: the status alone can mean several things (503 is both "no key" and "Groq is down").
+  switch (b.error) {
+    case "daily_limit":
+      return `Today’s free Groq allowance is used up, on the backup model too. Try again ${waitText(b.retryAfter)}.`;
+    case "groq_down":
+      return "Groq (the AI service) isn’t working right now. Try again in a few minutes.";
+    case "groq_timeout":
+      return "Groq took too long to answer. Try again, or shorten the scenario.";
+    case "too_long":
+      return "This chat is too long for the free model. Start a new chat and paste in just the scenario.";
+    case "offline":
+      return "Couldn’t reach the chatbot. Check your internet connection and try again.";
+  }
   if (status === 429) return `Groq's free limit is busy — try again in ${Math.max(1, Math.round(Number(b.retryAfter) || 60))} seconds`;
   if (status === 401) return "Your session has ended. Please sign in again.";
   if (status === 403 && b.error === "not_approved") return "Your account isn’t approved to use the chatbot.";
-  if (status === 503 || b.error === "not_configured") return "The Groq key isn't set up yet. Add GROQ_API_KEY under Supabase → Edge Functions → Secrets (see docs/GO-LIVE.md).";
+  if (b.error === "not_configured" || (status === 503 && !b.error)) return "The Groq key isn't set up yet. Add GROQ_API_KEY under Supabase → Edge Functions → Secrets (see docs/GO-LIVE.md).";
   if (b.error === "bad_answer") return "The answer came back in a form that couldn't be checked. Please try again.";
   if (b.error === "mask_too_large") return "This chat has too many hidden names and numbers to continue. Please start a new chat.";
   if (status === 400) return "Write the scenario in up to 4,000 characters.";

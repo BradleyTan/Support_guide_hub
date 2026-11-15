@@ -50,6 +50,18 @@ test("the owner can verify, delete and restore a guide, and sees the owner-only 
     await expect(page).toHaveURL(/\/guides\/G-\d+$/, { timeout: 30_000 });
     const code = page.url().split("/").pop()!;
 
+    // Edit, then restore the version from before the edit.
+    await page.goto(`/guides/${code}/edit`);
+    await page.getByLabel("Fix steps").fill("1. Changed owner step");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page).toHaveURL(new RegExp(`/guides/${code}$`));
+    await expect(page.getByText("Changed owner step")).toBeVisible();
+    await page.getByRole("button", { name: "Restore version before this edit" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Restore" }).click();
+    await expect(page.getByText("Earlier version restored")).toBeVisible();
+    await expect(page.getByText("Owner step", { exact: true })).toBeVisible();
+    await expect(page.locator("aside").getByText(/^Restored the version from before the edit on /)).toBeVisible();
+
     // Verify and un-verify.
     await page.getByRole("button", { name: "Mark verified" }).click();
     await expect(page.getByRole("button", { name: "Mark unverified" })).toBeVisible();

@@ -20,6 +20,11 @@ import { shortProduct } from "@/lib/guide-utils";
 import { ACCEPTED_TYPES, MAX_FILES, validateFile } from "@/lib/files";
 import { uploadAttachment } from "@/lib/upload";
 import { CATEGORIES, PLATFORM_LABELS, PLATFORMS, PRODUCTS, type Attachment } from "@/lib/types";
+import { appendText, ocrTextToLines } from "@/lib/ocr-text";
+import { ScreenshotButton, useScreenshotReader } from "@/components/search/screenshot-reader";
+
+/** Same limit as the guide schema's errorMessage. */
+const ERROR_MESSAGE_MAX = 4000;
 
 interface FormState {
   title: string;
@@ -179,6 +184,12 @@ export function GuideForm({
   const [similar, setSimilar] = useState<{ code: string; title: string }[]>([]);
   const [saving, startSaving] = useTransition();
   const set = (k: keyof FormState) => (v: string) => setF((p) => ({ ...p, [k]: v }));
+  // Screenshot → Error message: only images pasted in the Error message area (or chosen with its button) are read.
+  const errorBox = useRef<HTMLDivElement>(null);
+  const errorShot = useScreenshotReader((read) => setF((p) => ({ ...p, errorMessage: appendText(p.errorMessage, read, ERROR_MESSAGE_MAX) })), {
+    format: (raw) => ocrTextToLines(raw, ERROR_MESSAGE_MAX),
+    scope: errorBox,
+  });
 
   // Duplicate check against saved guides, a moment after typing stops.
   useEffect(() => {
@@ -279,9 +290,12 @@ export function GuideForm({
         <Field label="Symptom" htmlFor="symptom" error={errors.symptom} hint="What the user sees or reports.">
           <Textarea id="symptom" rows={2} value={f.symptom} onChange={(e) => set("symptom")(e.target.value)} className="bg-card" />
         </Field>
-        <Field label="Error message" htmlFor="errorMessage" error={errors.errorMessage} hint="Exact text, so search can match it later.">
-          <Textarea id="errorMessage" rows={2} value={f.errorMessage} onChange={(e) => set("errorMessage")(e.target.value)} className="bg-card font-mono text-[13px]" />
-        </Field>
+        <div ref={errorBox}>
+          <Field label="Error message" htmlFor="errorMessage" error={errors.errorMessage} hint="Exact text, so search can match it later. Paste a screenshot here (Ctrl+V) to fill it in from the image.">
+            <Textarea id="errorMessage" rows={2} value={f.errorMessage} onChange={(e) => set("errorMessage")(e.target.value)} className="bg-card font-mono text-[13px]" />
+            <ScreenshotButton reading={errorShot.reading} onFile={errorShot.read} label="Fill error message from a screenshot" className="self-start" />
+          </Field>
+        </div>
         <Field label="Cause" htmlFor="cause" error={errors.cause}>
           <Textarea id="cause" rows={2} value={f.cause} onChange={(e) => set("cause")(e.target.value)} className="bg-card" />
         </Field>

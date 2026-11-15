@@ -56,6 +56,11 @@ export function ChatView({ chat, chats, today }: { chat: Chat | null; chats: Cha
     setMask(res.mask);
     const note = webSearchNote(res.web);
     if (opts.forceWeb && note) toast.warning(note);
+    if (res.backup)
+      toast.info("Answered by the backup model", {
+        description: "Today’s free allowance for the main model is used up, so a smaller model answered. Check the steps a little more carefully.",
+        duration: 10_000,
+      });
     const answer = unmaskAnswer(res.checked, res.mask);
     const now = new Date().toISOString();
     setLocal((l) => [

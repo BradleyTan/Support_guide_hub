@@ -44,6 +44,11 @@ export interface Revision {
   summary: string;
   /** Who made the change ("a teammate" if the name can't be read); unset when unknown. */
   by?: string;
+  id?: string;
+  /** For an edit: each changed field, old and new. */
+  changes?: { field: string; before: string; after: string }[];
+  /** The guide as it was just before this edit can be restored (the owner only). */
+  restorable?: boolean;
 }
 
 /** A reusable troubleshooting or how-to guideline. */

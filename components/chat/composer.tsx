@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EyeOff, Loader2, ScanEye, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { autoMask, hideSelection, type MaskMap } from "@/lib/accountant/core/mask";
+import { appendText, ocrTextToLines } from "@/lib/ocr-text";
+import { ScreenshotButton, useScreenshotReader } from "@/components/search/screenshot-reader";
+
+const SCENARIO_MAX = 4000;
 
 /** Masks the typed scenario, shows exactly what will be sent, and lets the user hide anything else first. */
 export function maskScenario(text: string, hidden: string[], map: MaskMap): { text: string; map: MaskMap } {
@@ -34,7 +38,21 @@ export function Composer({
   const [hidden, setHidden] = useState<string[]>([]);
   const previewRef = useRef<HTMLPreElement>(null);
   const masked = useMemo(() => maskScenario(text, hidden, mask), [text, hidden, mask]);
-  const tooLong = text.length > 4000;
+  const tooLong = text.length > SCENARIO_MAX;
+  // A pasted or chosen screenshot's text goes into the box, never straight to Groq: the preview step still applies.
+  // Reading takes a few seconds; the latest typed text is used, so nothing typed meanwhile is lost.
+  const latestText = useRef(text);
+  useEffect(() => {
+    latestText.current = text;
+  }, [text]);
+  const screenshot = useScreenshotReader(
+    (read) => {
+      onText(appendText(latestText.current, read, SCENARIO_MAX));
+      setPreviewing(false);
+      toast.success("Text from the screenshot added. Check it, then preview what’s sent.");
+    },
+    { format: (raw) => ocrTextToLines(raw, SCENARIO_MAX) },
+  );
 
   function hidePicked() {
     const sel = window.getSelection();
@@ -63,14 +81,19 @@ export function Composer({
           aria-invalid={tooLong}
         />
         <p className={tooLong ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-          {tooLong ? `Keep it under 4,000 characters (${text.length.toLocaleString()} now).` : "IC, bank, phone, email and company names are hidden automatically before anything is sent."}
+          {tooLong
+            ? `Keep it under 4,000 characters (${text.length.toLocaleString()} now).`
+            : "IC, bank, phone, email and company names are hidden automatically before anything is sent. Got a screenshot? Paste it (Ctrl+V) and its text is added here."}
         </p>
       </div>
 
       {!previewing ? (
-        <Button onClick={() => setPreviewing(true)} disabled={!text.trim() || tooLong || busy}>
-          <ScanEye /> Preview what’s sent
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setPreviewing(true)} disabled={!text.trim() || tooLong || busy}>
+            <ScanEye /> Preview what’s sent
+          </Button>
+          <ScreenshotButton reading={screenshot.reading} onFile={screenshot.read} label="Add text from a screenshot" />
+        </div>
       ) : (
         <div className="space-y-2">
           <p className="text-sm font-medium" id="preview-label">

@@ -103,6 +103,23 @@ describe("askErrorMessage", () => {
     expect(askErrorMessage(400, { error: "mask_too_large" })).toMatch(/new chat/i);
   });
 
+  it("says when today's free allowance is used up, and roughly when it comes back", () => {
+    expect(askErrorMessage(429, { error: "daily_limit", retryAfter: 432 })).toBe("Today’s free Groq allowance is used up, on the backup model too. Try again in about 8 minutes.");
+    expect(askErrorMessage(429, { error: "daily_limit", retryAfter: 7200 })).toBe("Today’s free Groq allowance is used up, on the backup model too. Try again in about 2 hours.");
+    expect(askErrorMessage(429, { error: "daily_limit" })).toBe("Today’s free Groq allowance is used up, on the backup model too. Try again later today.");
+  });
+
+  it("explains Groq being down or slow, a too-long chat, and a lost connection", () => {
+    expect(askErrorMessage(502, { error: "groq_down" })).toBe("Groq (the AI service) isn’t working right now. Try again in a few minutes.");
+    expect(askErrorMessage(504, { error: "groq_timeout" })).toBe("Groq took too long to answer. Try again, or shorten the scenario.");
+    expect(askErrorMessage(413, { error: "too_long" })).toBe("This chat is too long for the free model. Start a new chat and paste in just the scenario.");
+    expect(askErrorMessage(0, { error: "offline" })).toBe("Couldn’t reach the chatbot. Check your internet connection and try again.");
+  });
+
+  it("only blames a missing key when the function says so", () => {
+    expect(askErrorMessage(503, { error: "groq_down" })).not.toMatch(/GROQ_API_KEY/);
+  });
+
   it("tells someone not yet approved that they are waiting", () => {
     expect(askErrorMessage(403, { error: "not_approved" })).toBe("Your account isn’t approved to use the chatbot.");
   });

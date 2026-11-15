@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type RefObject } from "react";
 import { ImageUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { imageFromClipboard, ocrTextToQuery, SCREENSHOT_TYPES, validateScreenshot } from "@/lib/ocr-text";
 
+type ReaderOptions = {
+  /** Shapes the raw OCR output for where it's going. Defaults to one search query. */
+  format?: (raw: string) => string;
+  /** Only images pasted inside this element are read. Without it, pasting anywhere on the page works. */
+  scope?: RefObject<HTMLElement | null>;
+};
+
 /**
- * Search by screenshot: reads the text in a pasted or chosen image and hands it over as a search. Pasting an image
- * anywhere on the page works while this is mounted; pasted text is left alone.
+ * Reads the text in a pasted or chosen image and hands it over (as a search by default). Pasted text is left alone.
  */
-export function useScreenshotReader(onQuery: (query: string) => void) {
+export function useScreenshotReader(onText: (text: string) => void, { format = ocrTextToQuery, scope }: ReaderOptions = {}) {
   const [reading, setReading] = useState(false);
 
   async function read(file: File) {
@@ -21,8 +27,8 @@ export function useScreenshotReader(onQuery: (query: string) => void) {
     setReading(true);
     try {
       const { readScreenshotText } = await import("@/lib/ocr");
-      const query = ocrTextToQuery(await readScreenshotText(file));
-      if (query) onQuery(query);
+      const text = format(await readScreenshotText(file));
+      if (text) onText(text);
       else toast.error("Couldn’t find any text in that screenshot. Try a clearer or larger one.");
     } catch {
       toast.error("Couldn’t read the screenshot. Please try again.");
@@ -39,14 +45,27 @@ export function useScreenshotReader(onQuery: (query: string) => void) {
   });
 
   useEffect(() => {
-    document.addEventListener("paste", onPaste);
-    return () => document.removeEventListener("paste", onPaste);
-  }, []);
+    const target: HTMLElement | Document | null = scope ? scope.current : document;
+    if (!target) return;
+    const listener = (e: Event) => onPaste(e as ClipboardEvent);
+    target.addEventListener("paste", listener);
+    return () => target.removeEventListener("paste", listener);
+  }, [scope]);
 
   return { reading, read };
 }
 
-export function ScreenshotButton({ reading, onFile, className }: { reading: boolean; onFile: (file: File) => void; className?: string }) {
+export function ScreenshotButton({
+  reading,
+  onFile,
+  className,
+  label = "Search by screenshot",
+}: {
+  reading: boolean;
+  onFile: (file: File) => void;
+  className?: string;
+  label?: string;
+}) {
   const picker = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -56,7 +75,7 @@ export function ScreenshotButton({ reading, onFile, className }: { reading: bool
         accept={SCREENSHOT_TYPES.join(",")}
         className="sr-only"
         tabIndex={-1}
-        aria-label="Screenshot to search with"
+        aria-label={`${label}: choose an image`}
         onChange={(e) => {
           const file = e.target.files?.[0];
           // Cleared so choosing the same file again still triggers a read.
@@ -64,7 +83,7 @@ export function ScreenshotButton({ reading, onFile, className }: { reading: bool
           if (file) onFile(file);
         }}
       />
-      <Button type="button" variant="outline" className={cn(className)} disabled={reading} aria-label="Search by screenshot" title="Read the text in a screenshot. It stays in your browser." onClick={() => picker.current?.click()}>
+      <Button type="button" variant="outline" className={cn(className)} disabled={reading} aria-label={label} title="Read the text in a screenshot. It stays in your browser." onClick={() => picker.current?.click()}>
         {reading ? <Loader2 className="animate-spin" /> : <ImageUp />}
         <span className="hidden sm:inline" aria-live="polite">
           {reading ? "Reading…" : "Screenshot"}

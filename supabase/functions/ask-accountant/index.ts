@@ -10,6 +10,7 @@ import { modelAnswerJsonSchema, parseAnswer, type Source } from "../_shared/acco
 import { checkAnswer } from "../_shared/accountant-core/checks.ts";
 import { autoMask, type MaskMap } from "../_shared/accountant-core/mask.ts";
 import { buildMessages } from "../_shared/accountant-core/prompt.ts";
+import { backupFor, classifyGroqFailure } from "../_shared/accountant-core/groq-errors.ts";
 import { articleBody, htmlToText, isFetchableArticle, searchQuery, toGuideSource, toKnowledgeSources, toOfficialSource } from "../_shared/accountant-core/sources.ts";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -108,12 +109,18 @@ class GroqError extends Error {
 }
 
 async function groq(key: string, body: Record<string, unknown>): Promise<string> {
-  const res = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90_000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90_000),
+    });
+  } catch (e) {
+    // 504 = Groq took too long; anything else = Groq couldn't be reached.
+    throw new GroqError(e instanceof DOMException && e.name === "TimeoutError" ? 504 : 503, 60, e instanceof Error ? e.message : "fetch failed");
+  }
   if (!res.ok) {
     const detail = (await res.text()).slice(0, 300);
     throw new GroqError(res.status, Number(res.headers.get("retry-after")) || 60, detail);
@@ -206,11 +213,20 @@ Deno.serve(async (req: Request) => {
     // A web search can use most of the free per-minute tokens, so the answer straight after it may be told "busy".
     // Wait once, as long as Groq asks (up to a minute, within the function's time limit), instead of failing.
     let waited = false;
+    // When the main model has used up today's free allowance, the backup model answers instead (once).
+    let backup: string | null = null;
     const attempt = async (): Promise<ReturnType<typeof parseAnswer>> => {
       try {
         return parseAnswer(await groq(key, request));
       } catch (e) {
         if (e instanceof GroqError && e.status === 400 && /schema|failed_generation|json_validate/i.test(e.message)) return { ok: false as const, error: "Groq's output didn't match the schema." };
+        const next = backup ? null : backupFor(request.model);
+        if (e instanceof GroqError && classifyGroqFailure(e.status, e.message) === "daily_limit" && next) {
+          console.warn(`[ask-accountant] ${request.model} used up for today; answering with ${next}`);
+          backup = next;
+          request.model = next;
+          return attempt();
+        }
         if (e instanceof GroqError && e.status === 429 && !waited && e.retryAfter <= 60 && Date.now() - startedAt < 40_000) {
           waited = true;
           await new Promise((r) => setTimeout(r, (e.retryAfter + 1) * 1000));
@@ -223,11 +239,16 @@ Deno.serve(async (req: Request) => {
     if (!parsed.ok) parsed = await attempt(); // one retry
     if (!parsed.ok) return json({ error: "bad_answer", detail: parsed.error }, 502);
 
-    return json({ checked: checkAnswer(parsed.answer, built.sources, built.map, built.replyPlaceholders), mask: built.map, web });
+    return json({ checked: checkAnswer(parsed.answer, built.sources, built.map, built.replyPlaceholders), mask: built.map, web, backup });
   } catch (e) {
     if (e instanceof GroqError) {
-      if (e.status === 429) return json({ error: "rate_limited", retryAfter: e.retryAfter }, 429, { "Retry-After": String(e.retryAfter) });
-      if (e.status === 401 || e.status === 403) return json({ error: "not_configured" }, 503);
+      const failure = classifyGroqFailure(e.status, e.message);
+      console.error(`[ask-accountant] Groq ${e.status} (${failure})`, e.message);
+      if (failure === "rate_limited" || failure === "daily_limit") return json({ error: failure, retryAfter: e.retryAfter }, 429, { "Retry-After": String(e.retryAfter) });
+      if (failure === "not_configured") return json({ error: "not_configured" }, 503);
+      if (failure === "too_long") return json({ error: "too_long" }, 413);
+      if (failure === "groq_timeout") return json({ error: "groq_timeout" }, 504);
+      if (failure === "groq_down") return json({ error: "groq_down" }, 502);
       return json({ error: "groq_error", detail: e.message }, 502);
     }
     console.error(e);

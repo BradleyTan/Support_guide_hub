@@ -152,6 +152,56 @@ test.describe("read-only", () => {
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByRole("alert").filter({ hasText: "GROQ_API_KEY" })).toBeVisible();
   });
+
+  test("used-up daily allowance and Groq being down are explained, and the message is kept", async ({ page }) => {
+    await preview(page, "Customer short-paid RM10.");
+    let reply = { status: 429, json: { error: "daily_limit", retryAfter: 3600 } as unknown };
+    await stubAsk(page, () => reply);
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Today’s free Groq allowance is used up, on the backup model too. Try again in about 60 minutes." })).toBeVisible();
+    reply = { status: 502, json: { error: "groq_down" } };
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Groq (the AI service) isn’t working right now. Try again in a few minutes." })).toBeVisible();
+    await expect(page.getByLabel("Customer’s scenario")).toHaveValue("Customer short-paid RM10.");
+  });
+
+  test("a lost connection is explained", async ({ page }) => {
+    await preview(page, "Customer short-paid RM10.");
+    await page.route("**/functions/v1/ask-accountant", (route) => route.abort("internetdisconnected"));
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Couldn’t reach the chatbot. Check your internet connection and try again." })).toBeVisible();
+  });
+
+  test("an answer from the backup model says so", async ({ page }) => {
+    await preview(page, "Customer short-paid RM10.");
+    await stubAsk(page, (body) => ({ status: 200, json: { checked: okAnswer, mask: body.mask, web: "off", backup: "openai/gpt-oss-20b" } }));
+    // Saving the chat is stopped, so nothing is written.
+    await page.route("**/chat", (route) => (route.request().method() === "POST" && route.request().headers()["next-action"] ? route.fulfill({ status: 500, body: "" }) : route.continue()));
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByText("Answered by the backup model")).toBeVisible();
+  });
+
+  test("a screenshot's text is added to the scenario, not sent", async ({ page }) => {
+    await page.goto("/chat");
+    await page.getByLabel("Customer’s scenario").fill("Customer says:");
+    const png = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 900;
+      canvas.height = 160;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, 900, 160);
+      ctx.fillStyle = "#000";
+      ctx.font = "40px Arial, sans-serif";
+      ctx.fillText("Posting date is out of range", 30, 95);
+      return canvas.toDataURL("image/png").split(",")[1];
+    });
+    const asked = await stubAsk(page, () => ({ status: 500, json: {} }));
+    await page.getByLabel("Add text from a screenshot: choose an image").setInputFiles({ name: "error.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
+    await expect(page.getByLabel("Customer’s scenario")).toHaveValue(/^Customer says:\nPosting date is out of range/i, { timeout: 90_000 });
+    await expect(page.getByRole("button", { name: "Preview what’s sent" })).toBeVisible();
+    expect(asked).toHaveLength(0);
+  });
 });
 
 test("settings shows a member their deleted chats but not the model or web-search controls", async ({ page }) => {

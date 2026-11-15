@@ -9,6 +9,8 @@ import { requireMember, requireOwner } from "@/lib/team";
 import { MEMBER_ONLY_ERROR, OWNER_ONLY_ERROR } from "@/lib/team-rules";
 import { describeChanges, guideInputSchema, inputToRow, type GuideInput } from "@/lib/guide-schema";
 import type { Json } from "@/lib/supabase/database.types";
+import { snapshotVersion } from "@/lib/guide-history";
+import { formatDateTime } from "@/lib/format";
 
 /** Server actions for the guide library. Every call runs as the signed-in user, so RLS applies. */
 
@@ -77,7 +79,15 @@ export async function updateGuide(code: string, input: unknown): Promise<ActionR
   if (!s) return fail(MEMBER_ONLY_ERROR);
   if (!guide || guide.deleted_at) return fail("This guide no longer exists.");
 
-  const before: GuideInput = {
+  const summary = describeChanges(currentInput(guide), parsed.data);
+  if (!summary) return { ok: true, data: { code } };
+  return saveVersion(s.supabase, guide, parsed.data, summary, code);
+}
+
+type GuideRowFull = NonNullable<Awaited<ReturnType<typeof findGuide>>["guide"]>;
+
+function currentInput(guide: GuideRowFull): GuideInput {
+  return {
     title: guide.title,
     product: guide.product as GuideInput["product"],
     platform: guide.platform as GuideInput["platform"],
@@ -91,16 +101,30 @@ export async function updateGuide(code: string, input: unknown): Promise<ActionR
     prevention: guide.prevention ?? "",
     tags: guide.tags,
   };
-  const summary = describeChanges(before, parsed.data);
-  if (!summary) return { ok: true, data: { code } };
+}
 
-  const { error } = await s.supabase.from("guides").update(inputToRow(parsed.data)).eq("id", guide.id);
+/** Saves a new version and records the previous one in the edit history, so it can be compared and restored. */
+async function saveVersion(supabase: NonNullable<Awaited<ReturnType<typeof session>>>["supabase"], guide: GuideRowFull, next: GuideInput, summary: string, code: string): Promise<ActionResult<{ code: string }>> {
+  const before = currentInput(guide);
+  const { error } = await supabase.from("guides").update(inputToRow(next)).eq("id", guide.id);
   if (error) return fail("Couldn’t save your changes. Please try again.");
-  // The snapshot keeps the previous version so an edit can be traced or undone by hand.
-  await s.supabase.from("guide_revisions").insert({ guide_id: guide.id, summary, snapshot: before as unknown as Json });
-  after(() => embedGuides(s.supabase, [guide.id]));
+  await supabase.from("guide_revisions").insert({ guide_id: guide.id, summary, snapshot: before as unknown as Json });
+  after(() => embedGuides(supabase, [guide.id]));
   refresh(code);
   return { ok: true, data: { code } };
+}
+
+/** Owner only: puts a guide back to how it was just before an earlier edit. The undo itself shows in the history. */
+export async function restoreGuideVersion(code: string, revisionId: string): Promise<ActionResult<{ code: string }>> {
+  if (!codeSchema.safeParse(code).success || !z.uuid().safeParse(revisionId).success) return fail("That version can’t be found.");
+  const { s, guide } = await findGuide(code, "owner");
+  if (!s) return fail(OWNER_ONLY_ERROR);
+  if (!guide || guide.deleted_at) return fail("This guide no longer exists.");
+  const { data: rev } = await s.supabase.from("guide_revisions").select("created_at, snapshot").eq("id", revisionId).eq("guide_id", guide.id).maybeSingle();
+  const version = snapshotVersion(rev?.snapshot);
+  if (!rev || !version) return fail("That version can’t be restored.");
+  if (!describeChanges(currentInput(guide), version)) return fail("The guide already matches that version.");
+  return saveVersion(s.supabase, guide, version, `Restored the version from before the edit on ${formatDateTime(rev.created_at)}`, code);
 }
 
 export async function setVerified(code: string, verified: boolean): Promise<ActionResult> {

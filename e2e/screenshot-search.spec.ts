@@ -33,8 +33,8 @@ test("a chosen screenshot is read in the browser and searched, using only the ap
   page.on("request", (r) => hosts.add(new URL(r.url()).host));
   const engine = page.waitForResponse((r) => r.url().endsWith("/ocr/eng.traineddata.gz") && r.ok());
 
-  await page.getByLabel("Screenshot to search with").setInputFiles({ name: "error.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
-  await expect(page.getByRole("button", { name: "Search by screenshot" })).toBeDisabled();
+  await page.getByLabel("Search by screenshot: choose an image").setInputFiles({ name: "error.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
+  await expect(page.getByRole("button", { name: "Search by screenshot", exact: true })).toBeDisabled();
   await engine;
 
   await expect(page.getByLabel("Search", { exact: true })).toHaveValue(new RegExp(ERROR_TEXT, "i"), { timeout: READ_TIMEOUT });
@@ -47,7 +47,7 @@ test("a chosen screenshot is read in the browser and searched, using only the ap
 test("pasting a screenshot on Home opens Search with its text", async ({ page }) => {
   test.setTimeout(READ_TIMEOUT + 30_000);
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Search by screenshot" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Search by screenshot", exact: true })).toBeVisible();
   const png = await drawScreenshot(page, ERROR_TEXT);
   await page.evaluate(async (b64) => {
     const blob = await (await fetch(`data:image/png;base64,${b64}`)).blob();
@@ -59,8 +59,24 @@ test("pasting a screenshot on Home opens Search with its text", async ({ page })
   await expect(page.getByLabel("Search", { exact: true })).toHaveValue(new RegExp(ERROR_TEXT, "i"));
 });
 
+test("search results mark the words that matched", async ({ page }) => {
+  await page.goto("/search?q=bank%20reconciliation");
+  const official = page.locator("section", { has: page.getByRole("heading", { name: "Official AutoCount sources" }) });
+  await expect(official.locator("mark").first()).toBeVisible();
+  await expect(official.locator("mark").first()).toHaveText(/^(bank|reconcil)/i);
+});
+
+test("a screenshot fills a new guide's error message, and nothing is saved", async ({ page }) => {
+  test.setTimeout(READ_TIMEOUT + 30_000);
+  await page.goto("/guides/new");
+  const png = await drawScreenshot(page, ERROR_TEXT);
+  await page.getByLabel("Fill error message from a screenshot: choose an image").setInputFiles({ name: "error.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
+  await expect(page.getByLabel("Error message", { exact: true })).toHaveValue(new RegExp(ERROR_TEXT, "i"), { timeout: READ_TIMEOUT });
+  await expect(page).toHaveURL(/\/guides\/new$/);
+});
+
 test("a file that isn't an image gets a clear message", async ({ page }) => {
   await page.goto("/search");
-  await page.getByLabel("Screenshot to search with").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await page.getByLabel("Search by screenshot: choose an image").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await expect(page.getByText("Use a PNG, JPG or WEBP image.")).toBeVisible();
 });

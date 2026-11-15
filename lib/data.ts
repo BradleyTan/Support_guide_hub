@@ -10,6 +10,8 @@ import type { MaskMap } from "@/lib/accountant/core/mask";
 import { analysisResultSchema } from "@/lib/analysis-schema";
 import type { Analysis, Attachment, Category, Confidence, Guide, Platform, Product, Template, TemplateKind } from "@/lib/types";
 import { editorNameFor } from "@/lib/team-rules";
+import { guideToInput } from "@/lib/guide-schema";
+import { withChanges } from "@/lib/guide-history";
 import { ACTIVITY_DAYS, libraryHealth, notOpenedRecently, type Insights, type OpenedGuide, type SearchGap } from "@/lib/insights";
 
 /** Server-side reads. Every query runs as the signed-in user, so RLS applies (shared team data; private chats). */
@@ -80,18 +82,24 @@ export const getGuide = cache(async (code: string): Promise<Guide | null> => {
   const r = row as GuideRow;
   const [att, rev, pins] = await Promise.all([
     supabase.from("guide_attachments").select("id, name, kind, size_bytes").eq("guide_id", r.id).order("created_at"),
-    supabase.from("guide_revisions").select("created_at, summary, user_id").eq("guide_id", r.id).order("created_at"),
+    supabase.from("guide_revisions").select("id, created_at, summary, user_id, snapshot").eq("guide_id", r.id).order("created_at"),
     supabase.from("pins").select("id, title, url, site").eq("guide_id", r.id).order("created_at"),
   ]);
   const revisions = rev.data ?? [];
   const nameOf = await editorNames(supabase, [r.updated_by, ...revisions.map((v) => v.user_id)]);
   const updatedByName = nameOf(r.updated_by);
+  const guide = rowToGuide(asRow(r), {
+    attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
+    revisions: [],
+  });
+  const history = withChanges(
+    revisions.map((v) => ({ id: v.id, at: v.created_at, summary: v.summary, snapshot: v.snapshot, userId: v.user_id })),
+    guideToInput(guide),
+  );
   return {
     updatedByName,
-    ...rowToGuide(asRow(r), {
-      attachments: (att.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind as Attachment["kind"], sizeKb: Math.round(a.size_bytes / 1024) })),
-      revisions: revisions.map((v) => ({ at: v.created_at, summary: v.summary, by: nameOf(v.user_id) })),
-    }),
+    ...guide,
+    revisions: history.map(({ userId, ...v }) => ({ ...v, by: nameOf(userId) })),
     pins: pins.data ?? [],
   };
 });

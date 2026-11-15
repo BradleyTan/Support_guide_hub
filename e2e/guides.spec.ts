@@ -59,6 +59,12 @@ test("create, edit, attach and pin on a guide; a member has no verify, unpin or 
   await expect(page).toHaveURL(new RegExp(`/guides/${code}$`));
   await expect(page.getByText("Template file not copied during upgrade")).toBeVisible();
   await expect(page.getByText("Edited cause")).toBeVisible();
+  // Edit history shows what changed; restoring an earlier version is owner-only.
+  const history = page.locator("aside section", { has: page.getByRole("heading", { name: "Edit history" }) });
+  await history.getByRole("button", { name: "Show changes" }).click();
+  await expect(history.getByRole("definition").filter({ hasText: "(empty)" })).toBeVisible();
+  await expect(history.getByRole("definition").filter({ hasText: "Template file not copied during upgrade" })).toBeVisible();
+  await expect(history.getByRole("button", { name: "Restore version before this edit" })).toHaveCount(0);
 
   // Verifying is owner-only: a member sees neither button, and the page says who edited it.
   await expect(page.getByRole("button", { name: "Mark verified" })).toHaveCount(0);
