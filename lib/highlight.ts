@@ -4,13 +4,30 @@
  */
 
 const FILLER = new Set(["the", "and", "for", "with", "not", "are", "was", "how", "what", "why", "when", "can", "cannot", "this", "that", "from", "into", "you", "your"]);
-// Longest first, so "reconciliation" loses "iation" rather than just "s".
-const SUFFIXES = ["iations", "ations", "iation", "ation", "ings", "ing", "ed", "es", "s"];
 const MIN_STEM = 3;
+const NUMBER = /^\p{N}+$/u;
 
+/**
+ * The start of a word that its other forms share: "posted"/"posting" → "post", "reconciliation" → "reconcil".
+ * Kept deliberately cautious so different words aren't marked: "dates" → "date" (not "dat", which marks "data"),
+ * "settings" → "setting" (not "sett", which marks "settlement"), "cases" → "case" (not "cas", which marks "cash"), "taxes" → "tax".
+ * Numbers are matched whole, so "20" doesn't mark "2026".
+ */
 function stem(word: string): string {
-  for (const s of SUFFIXES) if (word.endsWith(s) && word.length - s.length >= MIN_STEM) return word.slice(0, -s.length);
-  return word;
+  if (NUMBER.test(word)) return word;
+  const cut = (suffix: string, min = MIN_STEM) => (word.endsWith(suffix) && word.length - suffix.length >= min ? word.slice(0, -suffix.length) : null);
+  return (
+    cut("iations") ??
+    cut("ations") ??
+    cut("iation") ??
+    cut("ation") ??
+    (word.endsWith("ings") ? word.slice(0, -1) : null) ??
+    cut("ing", 4) ??
+    cut("ed") ??
+    (/(?:x|z|ch|sh)es$/.test(word) ? cut("es") : null) ??
+    (word.endsWith("ss") ? null : cut("s")) ??
+    word
+  );
 }
 
 /** The search words worth marking: lower-cased, no duplicates, no very short or filler words. */
@@ -22,7 +39,7 @@ export function queryTerms(query: string): string[] {
 
 function matches(word: string, stems: string[]): boolean {
   const w = word.toLowerCase();
-  return stems.some((s) => w.startsWith(s));
+  return stems.some((s) => (NUMBER.test(s) ? w === s : w.startsWith(s)));
 }
 
 export type Part = { text: string; hit: boolean };

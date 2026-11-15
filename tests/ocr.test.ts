@@ -76,7 +76,12 @@ describe("imageFromClipboard", () => {
   const item = (kind: string, type: string) => ({ kind, type, getAsFile: () => file(type) });
 
   it("finds a pasted image", () => {
-    expect(imageFromClipboard([item("string", "text/plain"), item("file", "image/png")])?.type).toBe("image/png");
+    expect(imageFromClipboard([item("file", "image/png")])?.type).toBe("image/png");
+    expect(imageFromClipboard([item("string", "text/html"), item("file", "image/png")])?.type).toBe("image/png");
+  });
+
+  it("leaves a paste alone when it also carries text, as copying cells from Excel or Word does", () => {
+    expect(imageFromClipboard([item("string", "text/plain"), item("string", "text/html"), item("file", "image/png")])).toBeNull();
   });
 
   it("leaves pasted text and other files alone", () => {

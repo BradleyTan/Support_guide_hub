@@ -26,6 +26,17 @@ describe("highlightParts", () => {
     expect(marked("Reconcile the bank", "reconciliation")).toBe("[Reconcile] the bank");
   });
 
+  it("doesn't mark different accounting words that only share a beginning", () => {
+    expect(marked("Database backup data", "dates")).toBe("Database backup data");
+    expect(marked("Cash sale", "cases")).toBe("Cash sale");
+    expect(marked("Settlement discount", "settings")).toBe("Settlement discount");
+    expect(marked("Taxes and boxes", "taxes")).toBe("[Taxes] and boxes");
+  });
+
+  it("marks numbers only as whole numbers", () => {
+    expect(marked("Year 2026, code 20", "20")).toBe("Year 2026, code [20]");
+  });
+
   it("only marks words that start with the search word", () => {
     expect(marked("Unposted document", "posted")).toBe("Unposted document");
   });

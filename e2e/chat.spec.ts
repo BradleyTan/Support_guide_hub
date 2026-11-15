@@ -158,7 +158,7 @@ test.describe("read-only", () => {
     let reply = { status: 429, json: { error: "daily_limit", retryAfter: 3600 } as unknown };
     await stubAsk(page, () => reply);
     await page.getByRole("button", { name: "Send" }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "Today’s free Groq allowance is used up, on the backup model too. Try again in about 60 minutes." })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "Today’s free Groq allowance is used up. Try again in about 60 minutes." })).toBeVisible();
     reply = { status: 502, json: { error: "groq_down" } };
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByRole("alert").filter({ hasText: "Groq (the AI service) isn’t working right now. Try again in a few minutes." })).toBeVisible();
@@ -200,6 +200,8 @@ test.describe("read-only", () => {
     await page.getByLabel("Add text from a screenshot: choose an image").setInputFiles({ name: "error.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
     await expect(page.getByLabel("Customer’s scenario")).toHaveValue(/^Customer says:\nPosting date is out of range/i, { timeout: 90_000 });
     await expect(page.getByRole("button", { name: "Preview what’s sent" })).toBeVisible();
+    // Give an accidental auto-send time to happen before checking that nothing was sent.
+    await page.waitForTimeout(1500);
     expect(asked).toHaveLength(0);
   });
 });

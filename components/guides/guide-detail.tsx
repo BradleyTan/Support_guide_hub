@@ -74,7 +74,7 @@ function HistoryEntry({ revision: r, code, canRestore }: { revision: Revision; c
           <DialogHeader>
             <DialogTitle>Restore this earlier version?</DialogTitle>
             <DialogDescription>
-              The guide goes back to how it was just before the edit on {formatDateTime(r.at)}. Your current version stays in the edit history, so you can restore it again later.
+              The guide goes back to how it was just before the edit on {formatDateTime(r.at)}, and is marked Unverified until you check it again. Your current version stays in the edit history, so you can restore it later.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

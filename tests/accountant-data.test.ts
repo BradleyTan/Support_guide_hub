@@ -104,9 +104,9 @@ describe("askErrorMessage", () => {
   });
 
   it("says when today's free allowance is used up, and roughly when it comes back", () => {
-    expect(askErrorMessage(429, { error: "daily_limit", retryAfter: 432 })).toBe("Today’s free Groq allowance is used up, on the backup model too. Try again in about 8 minutes.");
-    expect(askErrorMessage(429, { error: "daily_limit", retryAfter: 7200 })).toBe("Today’s free Groq allowance is used up, on the backup model too. Try again in about 2 hours.");
-    expect(askErrorMessage(429, { error: "daily_limit" })).toBe("Today’s free Groq allowance is used up, on the backup model too. Try again later today.");
+    expect(askErrorMessage(429, { error: "daily_limit", retryAfter: 432 })).toBe("Today’s free Groq allowance is used up. Try again in about 8 minutes.");
+    expect(askErrorMessage(429, { error: "daily_limit", retryAfter: 7200 })).toBe("Today’s free Groq allowance is used up. Try again in about 2 hours.");
+    expect(askErrorMessage(429, { error: "daily_limit" })).toBe("Today’s free Groq allowance is used up. Try again later today.");
   });
 
   it("explains Groq being down or slow, a too-long chat, and a lost connection", () => {
@@ -118,6 +118,9 @@ describe("askErrorMessage", () => {
 
   it("only blames a missing key when the function says so", () => {
     expect(askErrorMessage(503, { error: "groq_down" })).not.toMatch(/GROQ_API_KEY/);
+    // Supabase itself answering 503 (e.g. the function failed to start) isn't a missing key.
+    expect(askErrorMessage(503, { code: "BOOT_ERROR", message: "Function failed to start" })).toBe("The chatbot service isn’t responding right now. Try again in a few minutes.");
+    expect(askErrorMessage(503, null)).toBe("The chatbot service isn’t responding right now. Try again in a few minutes.");
   });
 
   it("tells someone not yet approved that they are waiting", () => {

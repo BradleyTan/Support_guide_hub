@@ -103,18 +103,36 @@ function currentInput(guide: GuideRowFull): GuideInput {
   };
 }
 
-/** Saves a new version and records the previous one in the edit history, so it can be compared and restored. */
-async function saveVersion(supabase: NonNullable<Awaited<ReturnType<typeof session>>>["supabase"], guide: GuideRowFull, next: GuideInput, summary: string, code: string): Promise<ActionResult<{ code: string }>> {
+/**
+ * Saves a new version and records the previous one in the edit history, so it can be compared and restored.
+ * unverify: also clear the Verified mark (an owner's own edits keep it otherwise).
+ */
+async function saveVersion(
+  supabase: NonNullable<Awaited<ReturnType<typeof session>>>["supabase"],
+  guide: GuideRowFull,
+  next: GuideInput,
+  summary: string,
+  code: string,
+  { unverify = false } = {},
+): Promise<ActionResult<{ code: string }>> {
   const before = currentInput(guide);
-  const { error } = await supabase.from("guides").update(inputToRow(next)).eq("id", guide.id);
+  const { error } = await supabase
+    .from("guides")
+    .update({ ...inputToRow(next), ...(unverify ? { verified: false } : {}) })
+    .eq("id", guide.id);
   if (error) return fail("Couldn’t save your changes. Please try again.");
-  await supabase.from("guide_revisions").insert({ guide_id: guide.id, summary, snapshot: before as unknown as Json });
+  const { error: historyError } = await supabase.from("guide_revisions").insert({ guide_id: guide.id, summary, snapshot: before as unknown as Json });
+  // The change is saved either way; without this row it just can't be compared or undone from the history.
+  if (historyError) console.error("[guides] edit-history row not saved", code, historyError.message);
   after(() => embedGuides(supabase, [guide.id]));
   refresh(code);
   return { ok: true, data: { code } };
 }
 
-/** Owner only: puts a guide back to how it was just before an earlier edit. The undo itself shows in the history. */
+/**
+ * Owner only: puts a guide back to how it was just before an earlier edit. The undo itself shows in the history.
+ * The restored text is marked Unverified: history rows are written by members too, so the owner checks it again.
+ */
 export async function restoreGuideVersion(code: string, revisionId: string): Promise<ActionResult<{ code: string }>> {
   if (!codeSchema.safeParse(code).success || !z.uuid().safeParse(revisionId).success) return fail("That version can’t be found.");
   const { s, guide } = await findGuide(code, "owner");
@@ -124,7 +142,7 @@ export async function restoreGuideVersion(code: string, revisionId: string): Pro
   const version = snapshotVersion(rev?.snapshot);
   if (!rev || !version) return fail("That version can’t be restored.");
   if (!describeChanges(currentInput(guide), version)) return fail("The guide already matches that version.");
-  return saveVersion(s.supabase, guide, version, `Restored the version from before the edit on ${formatDateTime(rev.created_at)}`, code);
+  return saveVersion(s.supabase, guide, version, `Restored the version from before the edit on ${formatDateTime(rev.created_at)}`, code, { unverify: true });
 }
 
 export async function setVerified(code: string, verified: boolean): Promise<ActionResult> {

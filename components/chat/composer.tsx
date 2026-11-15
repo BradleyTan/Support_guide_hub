@@ -51,7 +51,8 @@ export function Composer({
       setPreviewing(false);
       toast.success("Text from the screenshot added. Check it, then preview what’s sent.");
     },
-    { format: (raw) => ocrTextToLines(raw, SCENARIO_MAX) },
+    // Paused while an answer is on its way: the box is cleared when it arrives, so added text would be lost.
+    { format: (raw) => ocrTextToLines(raw, SCENARIO_MAX), disabled: busy },
   );
 
   function hidePicked() {
@@ -92,7 +93,7 @@ export function Composer({
           <Button onClick={() => setPreviewing(true)} disabled={!text.trim() || tooLong || busy}>
             <ScanEye /> Preview what’s sent
           </Button>
-          <ScreenshotButton reading={screenshot.reading} onFile={screenshot.read} label="Add text from a screenshot" />
+          <ScreenshotButton reading={screenshot.reading} disabled={busy} onFile={screenshot.read} label="Add text from a screenshot" />
         </div>
       ) : (
         <div className="space-y-2">

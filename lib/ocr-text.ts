@@ -60,10 +60,15 @@ export function appendText(current: string, added: string, max: number): string 
 
 type ClipboardEntry = { kind: string; type: string; getAsFile: () => File | null };
 
-/** The image in a paste, if there is one. Pasted text and other files return null, so normal pasting still works. */
+/**
+ * The image in a paste, if there is one. A paste that also carries plain text returns null, so normal pasting still
+ * works: copying cells from Excel (or text from Word or Outlook) puts a picture of them on the clipboard too.
+ */
 export function imageFromClipboard(items: Iterable<ClipboardEntry> | ArrayLike<ClipboardEntry> | null | undefined): File | null {
   if (!items) return null;
-  for (const item of Array.from(items)) {
+  const list = Array.from(items);
+  if (list.some((item) => item.kind === "string" && item.type === "text/plain")) return null;
+  for (const item of list) {
     if (item.kind === "file" && SCREENSHOT_TYPES.includes(item.type)) return item.getAsFile();
   }
   return null;

@@ -61,6 +61,7 @@ test("the owner can verify, delete and restore a guide, and sees the owner-only 
     await expect(page.getByText("Earlier version restored")).toBeVisible();
     await expect(page.getByText("Owner step", { exact: true })).toBeVisible();
     await expect(page.locator("aside").getByText(/^Restored the version from before the edit on /)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Mark verified" })).toBeVisible();
 
     // Verify and un-verify.
     await page.getByRole("button", { name: "Mark verified" }).click();

@@ -12,16 +12,18 @@ type ReaderOptions = {
   format?: (raw: string) => string;
   /** Only images pasted inside this element are read. Without it, pasting anywhere on the page works. */
   scope?: RefObject<HTMLElement | null>;
+  /** While true, pasted images are ignored (pasting works normally) and nothing is read. */
+  disabled?: boolean;
 };
 
 /**
  * Reads the text in a pasted or chosen image and hands it over (as a search by default). Pasted text is left alone.
  */
-export function useScreenshotReader(onText: (text: string) => void, { format = ocrTextToQuery, scope }: ReaderOptions = {}) {
+export function useScreenshotReader(onText: (text: string) => void, { format = ocrTextToQuery, scope, disabled = false }: ReaderOptions = {}) {
   const [reading, setReading] = useState(false);
 
   async function read(file: File) {
-    if (reading) return;
+    if (reading || disabled) return;
     const problem = validateScreenshot(file);
     if (problem) return void toast.error(problem);
     setReading(true);
@@ -38,6 +40,7 @@ export function useScreenshotReader(onText: (text: string) => void, { format = o
   }
 
   const onPaste = useEffectEvent((e: ClipboardEvent) => {
+    if (disabled) return;
     const image = imageFromClipboard(e.clipboardData?.items);
     if (!image) return;
     e.preventDefault();
@@ -57,11 +60,13 @@ export function useScreenshotReader(onText: (text: string) => void, { format = o
 
 export function ScreenshotButton({
   reading,
+  disabled = false,
   onFile,
   className,
   label = "Search by screenshot",
 }: {
   reading: boolean;
+  disabled?: boolean;
   onFile: (file: File) => void;
   className?: string;
   label?: string;
@@ -83,7 +88,7 @@ export function ScreenshotButton({
           if (file) onFile(file);
         }}
       />
-      <Button type="button" variant="outline" className={cn(className)} disabled={reading} aria-label={label} title="Read the text in a screenshot. It stays in your browser." onClick={() => picker.current?.click()}>
+      <Button type="button" variant="outline" className={cn(className)} disabled={reading || disabled} aria-label={label} title="Read the text in a screenshot. It stays in your browser." onClick={() => picker.current?.click()}>
         {reading ? <Loader2 className="animate-spin" /> : <ImageUp />}
         <span className="hidden sm:inline" aria-live="polite">
           {reading ? "Reading…" : "Screenshot"}

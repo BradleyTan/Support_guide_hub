@@ -54,7 +54,8 @@ export function withChanges<R extends RevisionRow>(revisions: R[], current: Guid
     delete rest.snapshot;
     const before = versions[i];
     if (!before) return { ...rest, restorable: false };
-    const nextIndex = r.snapshot ? revisions.findIndex((later, j) => j > i && later.snapshot) : -1;
+    // The next edit whose saved version is usable; an unusable one in between is skipped.
+    const nextIndex = versions.findIndex((later, j) => j > i && later);
     const after = nextIndex === -1 ? current : versions[nextIndex];
     const changes = after ? fieldChanges(before, after) : undefined;
     return { ...rest, changes: changes?.length ? changes : undefined, restorable: true };

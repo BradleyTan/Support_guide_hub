@@ -62,7 +62,7 @@ export function askErrorMessage(status: number, body: unknown): string {
   // Named errors first: the status alone can mean several things (503 is both "no key" and "Groq is down").
   switch (b.error) {
     case "daily_limit":
-      return `Today’s free Groq allowance is used up, on the backup model too. Try again ${waitText(b.retryAfter)}.`;
+      return `Today’s free Groq allowance is used up. Try again ${waitText(b.retryAfter)}.`;
     case "groq_down":
       return "Groq (the AI service) isn’t working right now. Try again in a few minutes.";
     case "groq_timeout":
@@ -75,8 +75,9 @@ export function askErrorMessage(status: number, body: unknown): string {
   if (status === 429) return `Groq's free limit is busy — try again in ${Math.max(1, Math.round(Number(b.retryAfter) || 60))} seconds`;
   if (status === 401) return "Your session has ended. Please sign in again.";
   if (status === 403 && b.error === "not_approved") return "Your account isn’t approved to use the chatbot.";
-  if (b.error === "not_configured" || (status === 503 && !b.error)) return "The Groq key isn't set up yet. Add GROQ_API_KEY under Supabase → Edge Functions → Secrets (see docs/GO-LIVE.md).";
+  if (b.error === "not_configured") return "The Groq key isn't set up yet. Add GROQ_API_KEY under Supabase → Edge Functions → Secrets (see docs/GO-LIVE.md).";
   if (b.error === "bad_answer") return "The answer came back in a form that couldn't be checked. Please try again.";
+  if (status >= 500 && !b.error) return "The chatbot service isn’t responding right now. Try again in a few minutes.";
   if (b.error === "mask_too_large") return "This chat has too many hidden names and numbers to continue. Please start a new chat.";
   if (status === 400) return "Write the scenario in up to 4,000 characters.";
   return "Couldn't get an answer just now. Please try again.";
