@@ -35,7 +35,7 @@ test("create, edit, attach and pin on a guide; a member has no verify, unpin or 
   await pick(page, "Product", "Accounting");
   await pick(page, "Platform", "Cloud");
   await page.getByLabel("Module").fill("Printing");
-  await page.getByLabel("Error message").fill("Report template not found");
+  await page.getByLabel("Error message", { exact: true }).fill("Report template not found");
   await page.getByLabel("Fix steps").fill("1. Export the template\n2. Import it again");
   await page.getByLabel("Tags").fill("printing, e2e");
   await page.getByRole("button", { name: "Save guide" }).click();
